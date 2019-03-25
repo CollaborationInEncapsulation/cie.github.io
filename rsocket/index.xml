@@ -18,7 +18,7 @@
       <pubDate>Sun, 24 Mar 2019 23:05:08 +0300</pubDate>
       
       <guid>http://coinen.space/rsocket/posts/how-to-rsocket-java-receiver-connector/</guid>
-      <description>Table of Contents Acknowledgment Declaring Core Dependency Constructing RSocket Receiver Declaring Transport Dependency Constructing RSocket Receiver Transport Constructing RSocket Connector Complete Sample Summary What is next?   Acknowledgment This is a first blog post in the series of How to get started with RSocket related blog posts in which I&amp;#8217;m going to share the simplest tips on running, configuring, and debugging RSocket.
+      <description>Table of Contents Acknowledgment Declaring Core Dependency Constructing RSocket Receiver Declaring Transport Dependency Constructing RSocket Receiver Transport Constructing RSocket Connector Complete Sample Summary What is next?   Acknowledgment This is a first blog post in the series of How to get started with RSocket related blog posts in which I&amp;#8217;m going to share the most straightforward tips on running, configuring, and debugging RSocket.
  This series of blog posts do not include the motivation of the RSocket itself which will be delivered in a separate series.</description>
     </item>
     

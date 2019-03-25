@@ -38,7 +38,7 @@
 &lt;h2 id=&#34;_acknowledgment&#34;&gt;Acknowledgment&lt;/h2&gt;
 &lt;div class=&#34;sectionbody&#34;&gt;
 &lt;div class=&#34;paragraph&#34;&gt;
-&lt;p&gt;This is a first blog post in the series of How to get started with RSocket related blog posts in which I&amp;#8217;m going to share the simplest tips on running, configuring, and debugging RSocket.&lt;/p&gt;
+&lt;p&gt;This is a first blog post in the series of How to get started with RSocket related blog posts in which I&amp;#8217;m going to share the most straightforward tips on running, configuring, and debugging RSocket.&lt;/p&gt;
 &lt;/div&gt;
 &lt;div class=&#34;paragraph&#34;&gt;
 &lt;p&gt;This series of blog posts do not include the motivation of the RSocket itself which will be delivered in a separate series.&lt;/p&gt;
@@ -49,7 +49,7 @@
 &lt;h2 id=&#34;_declaring_core_dependency&#34;&gt;Declaring Core Dependency&lt;/h2&gt;
 &lt;div class=&#34;sectionbody&#34;&gt;
 &lt;div class=&#34;paragraph&#34;&gt;
-&lt;p&gt;The first steps in the setup of any project is declaring the required dependencies. In our project we use Gradle, but the same can be reproduced with Maven:&lt;/p&gt;
+&lt;p&gt;The first steps in the setup of any project are declaring the required dependencies. In our project we use Gradle, but the same can be reproduced with Maven:&lt;/p&gt;
 &lt;/div&gt;
 &lt;div class=&#34;listingblock&#34;&gt;
 &lt;div class=&#34;content&#34;&gt;
@@ -96,7 +96,7 @@ public class RSocketPlayground {
 &lt;/div&gt;
 &lt;/div&gt;
 &lt;div class=&#34;paragraph&#34;&gt;
-&lt;p&gt;The above example show the first step of building an RSocket receiver. Call to &lt;code&gt;RSocketFactory.receive()&lt;/code&gt; returns a &lt;code&gt;RSocketFactory.ServerRSocketFactory&lt;/code&gt; instance which gives a wide list of customization for RSocket receiver. For now we just use only &lt;code&gt;io.rsocket.RSocketFactory.ServerRSocketFactory#acceptor&lt;/code&gt; which allows us to specify handler for incoming connections:&lt;/p&gt;
+&lt;p&gt;The above example shows the first step of building an RSocket receiver. Call to &lt;code&gt;RSocketFactory.receive()&lt;/code&gt; returns a &lt;code&gt;RSocketFactory.ServerRSocketFactory&lt;/code&gt; instance which gives a wide list of customization for RSocket receiver. For now, we just use only &lt;code&gt;io.rsocket.RSocketFactory.ServerRSocketFactory#acceptor&lt;/code&gt; which allows us to specify a handler for incoming connections:&lt;/p&gt;
 &lt;/div&gt;
 &lt;div class=&#34;listingblock&#34;&gt;
 &lt;div class=&#34;content&#34;&gt;
@@ -149,7 +149,7 @@ public class RSocketPlayground {
 &lt;/ol&gt;
 &lt;/div&gt;
 &lt;div class=&#34;paragraph&#34;&gt;
-&lt;p&gt;The above sample continues the RSocket receiver construction and shows how we can declare a no-ops socket acceptor. In turn, applying that stage returns a &lt;code&gt;io.rsocket.RSocketFactory.ServerTransportAcceptor&lt;/code&gt; which allows us to finalize setup by declaring a transport.&lt;/p&gt;
+&lt;p&gt;The above sample continues the RSocket receiver construction and shows how we can declare a no-ops socket acceptor. In turn, applying that stage returns an &lt;code&gt;io.rsocket.RSocketFactory.ServerTransportAcceptor&lt;/code&gt; which allows us to finalize setup by declaring a transport.&lt;/p&gt;
 &lt;/div&gt;
 &lt;/div&gt;
 &lt;/div&gt;
@@ -157,7 +157,7 @@ public class RSocketPlayground {
 &lt;h2 id=&#34;_declaring_transport_dependency&#34;&gt;Declaring Transport Dependency&lt;/h2&gt;
 &lt;div class=&#34;sectionbody&#34;&gt;
 &lt;div class=&#34;paragraph&#34;&gt;
-&lt;p&gt;Since RSocket is an Application Layer protocol, it may work on top of any lower level transport. In general core dependency provides just an interface for transport. Thus we have to add another link to required implementation. Today we are going to use local, inter process transport for simplicity:&lt;/p&gt;
+&lt;p&gt;Since RSocket is an Application Layer protocol, it may work on top of any lower level transport. In general, the core dependency provides just an interface for transport. Thus we have to add another link to the required implementation. Today we are going to use local, interprocess transport for simplicity:&lt;/p&gt;
 &lt;/div&gt;
 &lt;div class=&#34;listingblock&#34;&gt;
 &lt;div class=&#34;content&#34;&gt;
@@ -232,7 +232,7 @@ public class RSocketPlayground {
 &lt;h2 id=&#34;_constructing_rsocket_connector&#34;&gt;Constructing RSocket Connector&lt;/h2&gt;
 &lt;div class=&#34;sectionbody&#34;&gt;
 &lt;div class=&#34;paragraph&#34;&gt;
-&lt;p&gt;Following above-mentioned samples we can easily create an instance of RSocket connector. The only difference is that we have to use the &lt;code&gt;io.rsocket.RSocketFactory#connect&lt;/code&gt; factory method instead:&lt;/p&gt;
+&lt;p&gt;Following the samples mentioned above, we can easily create an instance of the RSocket connector. The only difference is that we have to use the &lt;code&gt;io.rsocket.RSocketFactory#connect&lt;/code&gt; factory method instead:&lt;/p&gt;
 &lt;/div&gt;
 &lt;div class=&#34;listingblock&#34;&gt;
 &lt;div class=&#34;content&#34;&gt;
@@ -298,7 +298,7 @@ public class RSocketPlayground {
 &lt;h2 id=&#34;_summary&#34;&gt;Summary&lt;/h2&gt;
 &lt;div class=&#34;sectionbody&#34;&gt;
 &lt;div class=&#34;paragraph&#34;&gt;
-&lt;p&gt;In this blog post we covered the simplest steps required to run RSocket receiver and connector.&lt;/p&gt;
+&lt;p&gt;In this blog post, we covered the most straightforward steps required to run the RSocket receiver and connector.&lt;/p&gt;
 &lt;/div&gt;
 &lt;div class=&#34;paragraph&#34;&gt;
 &lt;p&gt;To recap:&lt;/p&gt;
@@ -312,10 +312,10 @@ public class RSocketPlayground {
 &lt;p&gt;RSocket is Application layer protocol so it can be built in to of any lower transport.&lt;/p&gt;
 &lt;/li&gt;
 &lt;li&gt;
-&lt;p&gt;The &lt;code&gt;rocket-core&lt;/code&gt; module does not provide particular implementation of the transport, thus it is required to use additional module.&lt;/p&gt;
+&lt;p&gt;The &lt;code&gt;rocket-core&lt;/code&gt; module does not provide a particular implementation of the transport. Thus it is required to use an additional module.&lt;/p&gt;
 &lt;/li&gt;
 &lt;li&gt;
-&lt;p&gt;The simplest way to get started is using inter-process transport implementation which does not required running real server.&lt;/p&gt;
+&lt;p&gt;The simplest way to get started is by using inter-process transport implementation which does not require running a real server.&lt;/p&gt;
 &lt;/li&gt;
 &lt;/ol&gt;
 &lt;/div&gt;
@@ -325,7 +325,7 @@ public class RSocketPlayground {
 &lt;h2 id=&#34;_what_is_next&#34;&gt;What is next?&lt;/h2&gt;
 &lt;div class=&#34;sectionbody&#34;&gt;
 &lt;div class=&#34;paragraph&#34;&gt;
-&lt;p&gt;In the next blog post we will focus on how to start sending data between peers using RSocket-Java.&lt;/p&gt;
+&lt;p&gt;In the next blog post, we will focus on how to start sending data between peers using RSocket-Java.&lt;/p&gt;
 &lt;/div&gt;
 &lt;/div&gt;
 &lt;/div&gt;
