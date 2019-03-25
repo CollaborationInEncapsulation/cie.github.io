@@ -1,0 +1,426 @@
+<!DOCTYPE html>
+<html xmlns="http://www.w3.org/1999/xhtml"  lang="en-us">
+<head>
+<meta charset="UTF-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1"/>
+
+<title>How to get started with RSocket | Collaboration In Encapsulation</title>
+
+<meta property='og:title' content='How to get started with RSocket - Collaboration In Encapsulation'>
+<meta property='og:description' content='Table of Contents Acknowledgment Declaring Core Dependency Constructing RSocket Receiver Declaring Transport Dependency Constructing RSocket Receiver Transport Constructing RSocket Connector Complete Sample Summary What is next?   Acknowledgment This is a first blog post in the series of How to get started with RSocket related blog posts in which I&#8217;m going to share the simplest tips on running, configuring, and debugging RSocket.
+ This series of blog posts do not include the motivation of the RSocket itself which will be delivered in a separate series.'>
+<meta property='og:url' content='http://coinen.space/rsocket/posts/how-to-rsocket-java-receiver-connector/'>
+<meta property='og:site_name' content='Collaboration In Encapsulation'>
+<meta property='og:type' content='article'><meta property='og:image' content='https://www.gravatar.com/avatar/d8a7b6ff38e865dafa02259ed769eab4?s=256'><meta property='article:author' content='https://facebook.com/oleh.dokuka'><meta property='article:section' content='Rsocket'><meta property='article:published_time' content='2019-03-24T23:05:08&#43;03:00'/><meta property='article:modified_time' content='2019-03-24T23:05:08&#43;03:00'/><meta name='twitter:card' content='summary'><meta name='twitter:site' content='@OlehDokuka'><meta name='twitter:creator' content='@OlehDokuka'>
+
+
+<link href="http://coinen.space/index.xml" rel="alternate" type="application/rss+xml" title="Collaboration In Encapsulation" />
+
+<link rel="stylesheet" href="/css/style.css"/><link rel='stylesheet' href='http://coinen.space/css/custom.css'><link rel="apple-touch-icon" sizes="180x180" href="/apple-touch-icon.png">
+<link rel="icon" type="image/png" sizes="32x32" href="/favicon-32x32.png">
+<link rel="icon" type="image/png" sizes="16x16" href="/favicon-16x16.png">
+<link rel="manifest" href="/site.webmanifest">
+<link rel="mask-icon" href="/safari-pinned-tab.svg" color="#5bbad5">
+<meta name="msapplication-TileColor" content="#da532c">
+<meta name="theme-color" content="#ffffff">
+</head>
+<body>
+<section class="section">
+  <div class="container">
+    <nav class="nav">
+      <div class="nav-left">
+        <a class="nav-item" href="http://coinen.space/">
+          <h1 class="title is-4">Collaboration In Encapsulation</h1>
+        </a>
+      </div>
+      <div class="nav-right">
+        <nav class="nav-item level is-mobile"></nav>
+      </div>
+    </nav>
+
+    <nav class="nav">
+      
+
+      
+    </nav>
+
+  </div>
+</section>
+<section class="section">
+  <div class="container">
+    <div class="subtitle tags is-6 is-pulled-right">
+      
+    </div>
+    <h2 class="subtitle is-6">March 24, 2019</h2>
+    <h1 class="title">How to get started with RSocket</h1>
+    
+    <div class="content">
+      <div id="toc" class="toc">
+<div id="toctitle">Table of Contents</div>
+<ul class="sectlevel1">
+<li><a href="#_acknowledgment">Acknowledgment</a></li>
+<li><a href="#_declaring_core_dependency">Declaring Core Dependency</a></li>
+<li><a href="#_constructing_rsocket_receiver">Constructing RSocket Receiver</a></li>
+<li><a href="#_declaring_transport_dependency">Declaring Transport Dependency</a></li>
+<li><a href="#_constructing_rsocket_receiver_transport">Constructing RSocket Receiver Transport</a></li>
+<li><a href="#_constructing_rsocket_connector">Constructing RSocket Connector</a></li>
+<li><a href="#_complete_sample">Complete Sample</a></li>
+<li><a href="#_summary">Summary</a></li>
+<li><a href="#_what_is_next">What is next?</a></li>
+</ul>
+</div>
+<div class="sect1">
+<h2 id="_acknowledgment">Acknowledgment</h2>
+<div class="sectionbody">
+<div class="paragraph">
+<p>This is a first blog post in the series of How to get started with RSocket related blog posts in which I&#8217;m going to share the simplest tips on running, configuring, and debugging RSocket.</p>
+</div>
+<div class="paragraph">
+<p>This series of blog posts do not include the motivation of the RSocket itself which will be delivered in a separate series.</p>
+</div>
+</div>
+</div>
+<div class="sect1">
+<h2 id="_declaring_core_dependency">Declaring Core Dependency</h2>
+<div class="sectionbody">
+<div class="paragraph">
+<p>The first steps in the setup of any project is declaring the required dependencies. In our project we use Gradle, but the same can be reproduced with Maven:</p>
+</div>
+<div class="listingblock">
+<div class="content">
+<pre class="highlight"><code class="language-groovy" data-lang="groovy">dependencies {
+  implementation 'io.rsocket:rsocket-core:0.12.1-RC3-SNAPSHOT'
+}</code></pre>
+</div>
+</div>
+<div class="admonitionblock note">
+<table>
+<tr>
+<td class="icon">
+<div class="title">Note</div>
+</td>
+<td class="content">
+<div class="paragraph">
+<p>At a moment of this blog writing, the latest version of RSocket-Java was <code>0.12.1-RC3-SNAPSHOT</code>.</p>
+</div>
+</td>
+</tr>
+</table>
+</div>
+</div>
+</div>
+<div class="sect1">
+<h2 id="_constructing_rsocket_receiver">Constructing RSocket Receiver</h2>
+<div class="sectionbody">
+<div class="paragraph">
+<p>In RSocket-Java, any construction of connector/receiver starts with static factory called <code>io.rsocket.RSocketFactory</code>. <code>RSocketFactory</code> has two central builder methods one of which is for receiver declaration:</p>
+</div>
+<div class="listingblock">
+<div class="content">
+<pre class="highlight"><code class="language-java" data-lang="java">package com.example.rsocket;
+
+import io.rsocket.RSocketFactory;
+
+
+public class RSocketPlayground {
+  public static void main(String[] args) {
+    RSocketFactory.ServerRSocketFactory serverRSocketFactory =
+      RSocketFactory.receive();
+  }
+}</code></pre>
+</div>
+</div>
+<div class="paragraph">
+<p>The above example show the first step of building an RSocket receiver. Call to <code>RSocketFactory.receive()</code> returns a <code>RSocketFactory.ServerRSocketFactory</code> instance which gives a wide list of customization for RSocket receiver. For now we just use only <code>io.rsocket.RSocketFactory.ServerRSocketFactory#acceptor</code> which allows us to specify handler for incoming connections:</p>
+</div>
+<div class="listingblock">
+<div class="content">
+<pre class="highlight"><code class="language-java" data-lang="java">package com.example.rsocket;
+
+import io.rsocket.AbstractRSocket;
+import io.rsocket.ConnectionSetupPayload;
+import io.rsocket.RSocket;
+import io.rsocket.RSocketFactory;
+import io.rsocket.SocketAcceptor;
+import reactor.core.publisher.Mono;
+
+
+public class RSocketPlayground {
+  public static void main(String[] args) {
+    RSocketFactory.ServerRSocketFactory serverRSocketFactory =
+      RSocketFactory.receive();
+
+    RSocketFactory.ServerTransportAcceptor serverTransportAcceptor =
+      serverRSocketFactory.acceptor(new SocketAcceptor() {             <b class="conum">(1)</b>
+        @Override
+        public Mono&lt;RSocket&gt; accept(                                   <b class="conum">(2)</b>
+            ConnectionSetupPayload payload,                            <b class="conum">(3)</b>
+            RSocket connectorRSocket                                   <b class="conum">(4)</b>
+        ) {
+          return Mono.just(new AbstractRSocket() {});                  <b class="conum">(5)</b>
+        }
+      });
+  }
+}</code></pre>
+</div>
+</div>
+<div class="colist arabic">
+<ol>
+<li>
+<p>Creates an instance of the <code>io.rsocket.SocketAcceptor</code> class and passes it to the <code>acceptor</code> method;</p>
+</li>
+<li>
+<p>Declares the <code>accept</code> handler method which accept two params and asynchronously return server <code>RSocket</code>;</p>
+</li>
+<li>
+<p>Represents the information that connector can send to receiver at the connection stage;</p>
+</li>
+<li>
+<p>Instantiates <code>RSocket</code> that represents/gives access to the connector functionality;</p>
+</li>
+<li>
+<p>Constructs instance of RSocket that represents/gives access to receiver functionality;</p>
+</li>
+</ol>
+</div>
+<div class="paragraph">
+<p>The above sample continues the RSocket receiver construction and shows how we can declare a no-ops socket acceptor. In turn, applying that stage returns a <code>io.rsocket.RSocketFactory.ServerTransportAcceptor</code> which allows us to finalize setup by declaring a transport.</p>
+</div>
+</div>
+</div>
+<div class="sect1">
+<h2 id="_declaring_transport_dependency">Declaring Transport Dependency</h2>
+<div class="sectionbody">
+<div class="paragraph">
+<p>Since RSocket is an Application Layer protocol, it may work on top of any lower level transport. In general core dependency provides just an interface for transport. Thus we have to add another link to required implementation. Today we are going to use local, inter process transport for simplicity:</p>
+</div>
+<div class="listingblock">
+<div class="content">
+<pre class="highlight"><code class="language-groovy" data-lang="groovy">dependencies {
+  implementation 'io.rsocket:rsocket-transport-local:0.12.1-RC3-SNAPSHOT'
+}</code></pre>
+</div>
+</div>
+</div>
+</div>
+<div class="sect1">
+<h2 id="_constructing_rsocket_receiver_transport">Constructing RSocket Receiver Transport</h2>
+<div class="sectionbody">
+<div class="paragraph">
+<p>Finally, we can use <code>io.rsocket.transport.local.LocalServerTransport</code> in order to run RSocket receiver on it:</p>
+</div>
+<div class="listingblock">
+<div class="content">
+<pre class="highlight"><code class="language-java" data-lang="java">package com.example.rsocket;
+
+import io.rsocket.AbstractRSocket;
+import io.rsocket.ConnectionSetupPayload;
+import io.rsocket.RSocket;
+import io.rsocket.RSocketFactory;
+import io.rsocket.SocketAcceptor;
+import reactor.core.publisher.Mono;
+
+
+public class RSocketPlayground {
+  public static void main(String[] args) {
+    RSocketFactory.ServerRSocketFactory serverRSocketFactory =
+      RSocketFactory.receive();
+
+    RSocketFactory.ServerTransportAcceptor serverTransportAcceptor =
+      serverRSocketFactory.acceptor(new SocketAcceptor() {
+        @Override
+        public Mono&lt;RSocket&gt; accept(
+            ConnectionSetupPayload payload,
+            RSocket connectorRSocket
+        ) {
+          return Mono.just(new AbstractRSocket() {});
+        }
+      });
+
+    Closeable closeableServer = serverTransportAcceptor
+      .transport(LocalServerTransport.create("RSocket-Receiver"))    <b class="conum">(1)</b>
+      .start()                                                       <b class="conum">(2)</b>
+      .block();                                                      <b class="conum">(3)</b>
+  }
+}</code></pre>
+</div>
+</div>
+<div class="colist arabic">
+<ol>
+<li>
+<p>Creates an instance of <code>LocalServerTransport</code> and passes it to builder.</p>
+</li>
+<li>
+<p>Starts RSocket Receiver on the specified transport</p>
+</li>
+<li>
+<p>Blocks executing thread by the end of startup process</p>
+</li>
+</ol>
+</div>
+<div class="paragraph">
+<p>The above code show finalized creation of the RSocket Receiver that is running on the local or simply inter-process transport implementation.</p>
+</div>
+</div>
+</div>
+<div class="sect1">
+<h2 id="_constructing_rsocket_connector">Constructing RSocket Connector</h2>
+<div class="sectionbody">
+<div class="paragraph">
+<p>Following above-mentioned samples we can easily create an instance of RSocket connector. The only difference is that we have to use the <code>io.rsocket.RSocketFactory#connect</code> factory method instead:</p>
+</div>
+<div class="listingblock">
+<div class="content">
+<pre class="highlight"><code class="language-java" data-lang="java">RSocket rSocket = RSocketFactory
+  .connect()
+  .transport(LocalClientTransport.create("RSocket-Receiver"))
+  .start()
+  .block();</code></pre>
+</div>
+</div>
+</div>
+</div>
+<div class="sect1">
+<h2 id="_complete_sample">Complete Sample</h2>
+<div class="sectionbody">
+<div class="paragraph">
+<p>Finally, if we add some logging to the Receiver acceptor as in the following complete sample:</p>
+</div>
+<div class="listingblock">
+<div class="content">
+<pre class="highlight"><code class="language-java" data-lang="java">package com.example.rsocket;
+
+import io.rsocket.AbstractRSocket;
+import io.rsocket.ConnectionSetupPayload;
+import io.rsocket.RSocket;
+import io.rsocket.RSocketFactory;
+import io.rsocket.SocketAcceptor;
+import reactor.core.publisher.Mono;
+
+
+public class RSocketPlayground {
+  public static void main(String[] args) {
+    RSocketFactory.ServerRSocketFactory serverRSocketFactory =
+      RSocketFactory.receive();
+
+    RSocketFactory.ServerTransportAcceptor serverTransportAcceptor =
+      serverRSocketFactory.acceptor(new SocketAcceptor() {
+        @Override
+        public Mono&lt;RSocket&gt; accept(
+            ConnectionSetupPayload payload,
+            RSocket connectorRSocket
+        ) {
+          System.out.println(
+            "Received Connection. Data: [" + payload.getDataUtf8() + "]. " +
+            "Metadata: [" + payload.getMetadataUtf8() + "]"
+          );
+
+          return Mono.just(new AbstractRSocket() {});
+        }
+      });
+
+    Closeable closeableServer = serverTransportAcceptor
+      .transport(LocalServerTransport.create("RSocket-Receiver"))
+      .start()
+      .block();
+  }
+}</code></pre>
+</div>
+</div>
+</div>
+</div>
+<div class="sect1">
+<h2 id="_summary">Summary</h2>
+<div class="sectionbody">
+<div class="paragraph">
+<p>In this blog post we covered the simplest steps required to run RSocket receiver and connector.</p>
+</div>
+<div class="paragraph">
+<p>To recap:</p>
+</div>
+<div class="olist arabic">
+<ol class="arabic">
+<li>
+<p>All you need is in <code>io.rsocket.RSocketFactory</code>.</p>
+</li>
+<li>
+<p>RSocket is Application layer protocol so it can be built in to of any lower transport.</p>
+</li>
+<li>
+<p>The <code>rocket-core</code> module does not provide particular implementation of the transport, thus it is required to use additional module.</p>
+</li>
+<li>
+<p>The simplest way to get started is using inter-process transport implementation which does not required running real server.</p>
+</li>
+</ol>
+</div>
+</div>
+</div>
+<div class="sect1">
+<h2 id="_what_is_next">What is next?</h2>
+<div class="sectionbody">
+<div class="paragraph">
+<p>In the next blog post we will focus on how to start sending data between peers using RSocket-Java.</p>
+</div>
+</div>
+</div>
+
+      
+      <div class="related">
+</div>
+      
+    </div>
+    
+  </div>
+</section>
+
+<section class="section">
+  <div class="container">
+    <aside><div id="disqus_thread"></div></aside>
+  
+    <script type="text/javascript">
+      var disqus_shortname = 'coinen';
+      function disqus() {
+        var dsq = document.createElement('script'); dsq.type = 'text/javascript'; dsq.async = true;
+        dsq.src = '//' + disqus_shortname + '.disqus.com/embed.js';
+        (document.getElementsByTagName('head')[0] || document.getElementsByTagName('body')[0]).appendChild(dsq);
+      }
+  
+      disqus();
+  
+
+    </script>
+    <noscript>Please enable JavaScript to view the <a href="https://disqus.com/?ref_noscript" rel="nofollow">comments powered by Disqus.</a></noscript>
+  </div>
+</section>
+
+
+<section class="section">
+  <div class="container has-text-centered">
+    <p>&copy; <a href="https://github.com/OlegDokuka">Oleh Dokuka</a> 2019</p>
+    
+      <p>Powered by <a href="https://gohugo.io/">Hugo</a> &amp; <a href="https://github.com/ribice/kiss">Kiss</a>.</p>
+    
+  </div>
+</section>
+
+<script type="text/javascript">
+  var _paq = _paq || [];
+  _paq.push(['trackPageView']);
+  _paq.push(['enableLinkTracking']);
+  (function() {
+    var u="\/\/matomo.example.com\/";
+    _paq.push(['setTrackerUrl', u+'piwik.php']);
+    _paq.push(['setSiteId', '1']);
+    var d=document, g=d.createElement('script'), s=d.getElementsByTagName('script')[0];
+    g.type='text/javascript'; g.async=true; g.defer=true; g.src=u+'piwik.js'; s.parentNode.insertBefore(g,s);
+  })();
+</script>
+<noscript>
+  <img src="//matomo.example.com/piwik.php?idsite=1&amp;rec=1" style="border:0" alt="" />
+</noscript>
+
+
+</body>
+</html>
+
