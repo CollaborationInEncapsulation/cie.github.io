@@ -1,12 +1,27 @@
-<?xml version="1.0" encoding="UTF-8"?>
-<urlset xmlns="http://www.sitemaps.org/schemas/sitemap/0.9">
+<?xml version="1.0" encoding="utf-8" standalone="yes" ?>
+<urlset xmlns="http://www.sitemaps.org/schemas/sitemap/0.9"
+  xmlns:xhtml="http://www.w3.org/1999/xhtml">
+  
   <url>
-    <loc>https://collaborationinencapsulation.github.io/</loc>
+    <loc>http://coinen.space/rsocket/posts/how-to-get-started-rsocket/</loc>
+    <lastmod>2019-03-24T23:05:08+03:00</lastmod>
   </url>
+  
   <url>
-    <loc>https://collaborationinencapsulation.github.io/error</loc>
+    <loc>http://coinen.space/</loc>
+    <lastmod>2019-03-24T23:05:08+03:00</lastmod>
+    <priority>0</priority>
   </url>
+  
   <url>
-    <loc>https://collaborationinencapsulation.github.io/about</loc>
+    <loc>http://coinen.space/rsocket/</loc>
+    <lastmod>2019-03-24T23:05:08+03:00</lastmod>
+    <priority>0</priority>
   </url>
+  
+  <url>
+    <loc>http://coinen.space/tags/</loc>
+    <priority>0</priority>
+  </url>
+  
 </urlset>

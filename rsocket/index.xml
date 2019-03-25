@@ -1,0 +1,26 @@
+<?xml version="1.0" encoding="utf-8" standalone="yes" ?>
+<rss version="2.0" xmlns:atom="http://www.w3.org/2005/Atom">
+  <channel>
+    <title>Rsockets on Collaboration In Encapsulation</title>
+    <link>http://coinen.space/rsocket/</link>
+    <description>Recent content in Rsockets on Collaboration In Encapsulation</description>
+    <generator>Hugo -- gohugo.io</generator>
+    <language>en-us</language>
+    <copyright>&amp;copy; &lt;a href=&#34;https://github.com/OlegDokuka&#34;&gt;Oleh Dokuka&lt;/a&gt; 2019</copyright>
+    <lastBuildDate>Sun, 24 Mar 2019 23:05:08 +0300</lastBuildDate>
+    
+	<atom:link href="http://coinen.space/rsocket/index.xml" rel="self" type="application/rss+xml" />
+    
+    
+    <item>
+      <title>How to get started with RSocket</title>
+      <link>http://coinen.space/rsocket/posts/how-to-get-started-rsocket/</link>
+      <pubDate>Sun, 24 Mar 2019 23:05:08 +0300</pubDate>
+      
+      <guid>http://coinen.space/rsocket/posts/how-to-get-started-rsocket/</guid>
+      <description>Table of Contents Acknowledgment Declaring Core Dependency Constructing RSocket Receiver Declaring Transport Dependency Constructing RSocket Receiver Transport Constructing RSocket Connector Complete Sample Summary   Acknowledgment This is a first blog post in the series of How to get started with RSocket related blog posts in which I&amp;#8217;m going to share the simplest tips on running, configuring, and debugging RSocket.
+ This series of blog posts do not include the motivation of the RSocket itself which will be delivered in a separate series.</description>
+    </item>
+    
+  </channel>
+</rss>
