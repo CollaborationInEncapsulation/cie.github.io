@@ -83,10 +83,10 @@
 &lt;p&gt;&lt;code&gt;fireAndForget&lt;/code&gt; - an advanced &lt;code&gt;requestResponse&lt;/code&gt; which does not wait for the response at all.&lt;/p&gt;
 &lt;/li&gt;
 &lt;li&gt;
-&lt;p&gt;&lt;code&gt;requestStream&lt;/code&gt; - the request with a response as a stream of `Payload`s.&lt;/p&gt;
+&lt;p&gt;&lt;code&gt;requestStream&lt;/code&gt; - the request with a response as a stream of &lt;code&gt;Payload&lt;/code&gt;.&lt;/p&gt;
 &lt;/li&gt;
 &lt;li&gt;
-&lt;p&gt;&lt;code&gt;requestChannel&lt;/code&gt; - duplex streaming where the sender can send a stream of `Payload`s, as well as the responder, can respond with a stream of `Payload`s.&lt;/p&gt;
+&lt;p&gt;&lt;code&gt;requestChannel&lt;/code&gt; - duplex streaming where the sender can send a stream of &lt;code&gt;Payload&lt;/code&gt;, as well as the responder, can respond with a stream of &lt;code&gt;Payload&lt;/code&gt;.&lt;/p&gt;
 &lt;/li&gt;
 &lt;li&gt;
 &lt;p&gt;&lt;code&gt;metadataPush&lt;/code&gt; - the special interaction type which allows pushing meta information to a responder. The main difference with &lt;code&gt;fireAndForget&lt;/code&gt; is that &lt;code&gt;metadataPush&lt;/code&gt; awaits successful processing of the pushed data and completes when responder sends a complete signal.&lt;/p&gt;
@@ -206,7 +206,7 @@ Payload response = rSocket
 &lt;/ol&gt;
 &lt;/div&gt;
 &lt;div class=&#34;paragraph&#34;&gt;
-&lt;p&gt;As we can see from the sample above, we can easily use &lt;code&gt;RSocket&lt;/code&gt; API in order to execute plain request response interaction. In turn, RSocket core module provides us with straightforward API in order to construct a &lt;code&gt;Payload&lt;/code&gt; instance from either &lt;code&gt;byte`s or `String&lt;/code&gt;.&lt;/p&gt;
+&lt;p&gt;As we can see from the sample above, we can easily use &lt;code&gt;RSocket&lt;/code&gt; API in order to execute plain request response interaction. In turn, RSocket core module provides us with straightforward API in order to construct a &lt;code&gt;Payload&lt;/code&gt; instance from either &lt;code&gt;byte&lt;/code&gt; buffer or &lt;code&gt;String&lt;/code&gt;.&lt;/p&gt;
 &lt;/div&gt;
 &lt;div class=&#34;paragraph&#34;&gt;
 &lt;p&gt;By running the code above we observe the following output in the console:&lt;/p&gt;
@@ -341,7 +341,7 @@ public Flux&amp;lt;Payload&amp;gt; requestChannel(Publisher&amp;lt;Payload&amp;g
 &lt;p&gt;Responds with &lt;code&gt;FluxRange&lt;/code&gt; and &lt;code&gt;.map&lt;/code&gt; each element to &lt;code&gt;Payload&lt;/code&gt;;&lt;/p&gt;
 &lt;/li&gt;
 &lt;li&gt;
-&lt;p&gt;Declares the &lt;code&gt;requestChannel&lt;/code&gt; method which accepts in that case a &lt;code&gt;Publisher&lt;/code&gt; of `Payload`s;&lt;/p&gt;
+&lt;p&gt;Declares the &lt;code&gt;requestChannel&lt;/code&gt; method which accepts in that case a &lt;code&gt;Publisher&lt;/code&gt; of &lt;code&gt;Payload&lt;/code&gt;;&lt;/p&gt;
 &lt;/li&gt;
 &lt;li&gt;
 &lt;p&gt;Adopts &lt;code&gt;Publisher&lt;/code&gt; to Reactor&amp;#8217;s &lt;code&gt;Flux&lt;/code&gt;;&lt;/p&gt;

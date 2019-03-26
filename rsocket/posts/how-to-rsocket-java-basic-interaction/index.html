@@ -118,10 +118,10 @@
 <p><code>fireAndForget</code> - an advanced <code>requestResponse</code> which does not wait for the response at all.</p>
 </li>
 <li>
-<p><code>requestStream</code> - the request with a response as a stream of `Payload`s.</p>
+<p><code>requestStream</code> - the request with a response as a stream of <code>Payload</code>.</p>
 </li>
 <li>
-<p><code>requestChannel</code> - duplex streaming where the sender can send a stream of `Payload`s, as well as the responder, can respond with a stream of `Payload`s.</p>
+<p><code>requestChannel</code> - duplex streaming where the sender can send a stream of <code>Payload</code>, as well as the responder, can respond with a stream of <code>Payload</code>.</p>
 </li>
 <li>
 <p><code>metadataPush</code> - the special interaction type which allows pushing meta information to a responder. The main difference with <code>fireAndForget</code> is that <code>metadataPush</code> awaits successful processing of the pushed data and completes when responder sends a complete signal.</p>
@@ -241,7 +241,7 @@ Payload response = rSocket
 </ol>
 </div>
 <div class="paragraph">
-<p>As we can see from the sample above, we can easily use <code>RSocket</code> API in order to execute plain request response interaction. In turn, RSocket core module provides us with straightforward API in order to construct a <code>Payload</code> instance from either <code>byte`s or `String</code>.</p>
+<p>As we can see from the sample above, we can easily use <code>RSocket</code> API in order to execute plain request response interaction. In turn, RSocket core module provides us with straightforward API in order to construct a <code>Payload</code> instance from either <code>byte</code> buffer or <code>String</code>.</p>
 </div>
 <div class="paragraph">
 <p>By running the code above we observe the following output in the console:</p>
@@ -376,7 +376,7 @@ public Flux&lt;Payload&gt; requestChannel(Publisher&lt;Payload&gt; payloads) {  
 <p>Responds with <code>FluxRange</code> and <code>.map</code> each element to <code>Payload</code>;</p>
 </li>
 <li>
-<p>Declares the <code>requestChannel</code> method which accepts in that case a <code>Publisher</code> of `Payload`s;</p>
+<p>Declares the <code>requestChannel</code> method which accepts in that case a <code>Publisher</code> of <code>Payload</code>;</p>
 </li>
 <li>
 <p>Adopts <code>Publisher</code> to Reactor&#8217;s <code>Flux</code>;</p>
