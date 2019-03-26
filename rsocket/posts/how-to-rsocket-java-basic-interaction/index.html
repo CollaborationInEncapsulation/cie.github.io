@@ -1,0 +1,538 @@
+<!DOCTYPE html>
+<html xmlns="http://www.w3.org/1999/xhtml"  lang="en-us">
+<head>
+<meta charset="UTF-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1"/>
+
+<title>How-To: Send first messages in RSocket-Java | Collaboration In Encapsulation</title>
+
+<meta property='og:title' content='How-To: Send first messages in RSocket-Java - Collaboration In Encapsulation'>
+<meta property='og:description' content='Table of Contents Acknowledgment Working With Payload Building communication with RSocket Building Request-Response interaction Implementing Fire and Forget Implementing Request Stream and Request Channel Summary What is next?   Acknowledgment This is the second blog post in the series of How to get started with RSocket related blog posts in which I&#8217;m going to share the most straightforward tips on running, configuring, and debugging RSocket.
+ In this blog post, I&#8217;m going to share some necessary information about existing communication models in RSocket and how to start using them.'>
+<meta property='og:url' content='http://coinen.space/rsocket/posts/how-to-rsocket-java-basic-interaction/'>
+<meta property='og:site_name' content='Collaboration In Encapsulation'>
+<meta property='og:type' content='article'><meta property='og:image' content='https://www.gravatar.com/avatar/d8a7b6ff38e865dafa02259ed769eab4?s=256'><meta property='article:author' content='https://facebook.com/oleh.dokuka'><meta property='article:section' content='Rsocket'><meta property='article:published_time' content='2019-03-24T23:05:08&#43;03:00'/><meta property='article:modified_time' content='2019-03-24T23:05:08&#43;03:00'/><meta name='twitter:card' content='summary'><meta name='twitter:site' content='@OlehDokuka'><meta name='twitter:creator' content='@OlehDokuka'>
+
+
+<link href="http://coinen.space/index.xml" rel="alternate" type="application/rss+xml" title="Collaboration In Encapsulation" />
+
+<link rel="stylesheet" href="/css/style.css"/><link rel='stylesheet' href='http://coinen.space/css/custom.css'><link rel="apple-touch-icon" sizes="180x180" href="/apple-touch-icon.png">
+<link rel="icon" type="image/png" sizes="32x32" href="/favicon-32x32.png">
+<link rel="icon" type="image/png" sizes="16x16" href="/favicon-16x16.png">
+<link rel="manifest" href="/site.webmanifest">
+<link rel="mask-icon" href="/safari-pinned-tab.svg" color="#5bbad5">
+<meta name="msapplication-TileColor" content="#da532c">
+<meta name="theme-color" content="#ffffff">
+</head>
+<body>
+<section class="section">
+  <div class="container">
+    <nav class="nav">
+      <div class="nav-left">
+        <a class="nav-item" href="http://coinen.space/">
+          <h1 class="title is-4">Collaboration In Encapsulation</h1>
+        </a>
+      </div>
+      <div class="nav-right">
+        <nav class="nav-item level is-mobile"></nav>
+      </div>
+    </nav>
+
+    <nav class="nav">
+      
+
+      
+    </nav>
+
+  </div>
+</section>
+<section class="section">
+  <div class="container">
+    <div class="subtitle tags is-6 is-pulled-right">
+      
+    </div>
+    <h2 class="subtitle is-6">March 24, 2019</h2>
+    <h1 class="title">How-To: Send first messages in RSocket-Java</h1>
+    
+    <div class="content">
+      <div id="toc" class="toc">
+<div id="toctitle">Table of Contents</div>
+<ul class="sectlevel1">
+<li><a href="#_acknowledgment">Acknowledgment</a></li>
+<li><a href="#_working_with_payload">Working With Payload</a></li>
+<li><a href="#_building_communication_with_rsocket">Building communication with RSocket</a></li>
+<li><a href="#_building_request_response_interaction">Building Request-Response interaction</a></li>
+<li><a href="#_implementing_fire_and_forget">Implementing Fire and Forget</a></li>
+<li><a href="#_implementing_request_stream_and_request_channel">Implementing Request Stream and Request Channel</a></li>
+<li><a href="#_summary">Summary</a></li>
+<li><a href="#_what_is_next">What is next?</a></li>
+</ul>
+</div>
+<div class="sect1">
+<h2 id="_acknowledgment">Acknowledgment</h2>
+<div class="sectionbody">
+<div class="paragraph">
+<p>This is the second blog post in the series of How to get started with RSocket related blog posts in which I&#8217;m going to share the most straightforward tips on running, configuring, and debugging RSocket.</p>
+</div>
+<div class="paragraph">
+<p>In this blog post, I&#8217;m going to share some necessary information about existing communication models in RSocket and how to start using them. Also, this post continuous the <a href="../how-to-rsocket-java-receiver-connector">first</a> so I assume you have a backbone of the project.</p>
+</div>
+</div>
+</div>
+<div class="sect1">
+<h2 id="_working_with_payload">Working With Payload</h2>
+<div class="sectionbody">
+<div class="paragraph">
+<p>Before we dig deeper into the communication models in RSocket, we have to learn the central data representation that RSocket uses for its messaging.</p>
+</div>
+<div class="paragraph">
+<p>The central data representation in RSocket is <code>io.rsocket.Payload</code>. In RSocket, <code>Payload</code> consists of two parts:</p>
+</div>
+<div class="ulist">
+<ul>
+<li>
+<p><code>data</code> - usually, message body we send. Effective payload&#8217;s part that we can use for business logic.</p>
+</li>
+<li>
+<p><code>metadata</code> - message meta information. Allows sending some contextual information.</p>
+</li>
+</ul>
+</div>
+<div class="paragraph">
+<p>Both parts of the <code>Payload</code> interface are represented as binary data, so the responsibility of conversion of a logical element back and forth lays on us.</p>
+</div>
+</div>
+</div>
+<div class="sect1">
+<h2 id="_building_communication_with_rsocket">Building communication with RSocket</h2>
+<div class="sectionbody">
+<div class="paragraph">
+<p>There are 5 central interaction models in RSocket:</p>
+</div>
+<div class="ulist">
+<ul>
+<li>
+<p><code>requestResponse</code> - the most common interaction type we ever used in our development.</p>
+</li>
+<li>
+<p><code>fireAndForget</code> - an advanced <code>requestResponse</code> which does not wait for the response at all.</p>
+</li>
+<li>
+<p><code>requestStream</code> - the request with a response as a stream of `Payload`s.</p>
+</li>
+<li>
+<p><code>requestChannel</code> - duplex streaming where the sender can send a stream of `Payload`s, as well as the responder, can respond with a stream of `Payload`s.</p>
+</li>
+<li>
+<p><code>metadataPush</code> - the special interaction type which allows pushing meta information to a responder. The main difference with <code>fireAndForget</code> is that <code>metadataPush</code> awaits successful processing of the pushed data and completes when responder sends a complete signal.</p>
+</li>
+</ul>
+</div>
+<div class="paragraph">
+<p>The fantastic part of RSocket is that all those methods are incorporated within the <code>io.rsocket.RSocket</code> class. Moreover <code>RSocket</code> plays both roles - a sender role which means we can use <code>RSocket</code> in order to make a call, and the responder role which means we should return an implementation of this class in order to handle incoming calls.</p>
+</div>
+</div>
+</div>
+<div class="sect1">
+<h2 id="_building_request_response_interaction">Building Request-Response interaction</h2>
+<div class="sectionbody">
+<div class="paragraph">
+<p>In this listen we are going to reuse the <a href="../how-to-rsocket-java-receiver-connector#_complete_sample">complete sample</a> from the previous blog post. As we can see from the code snippet, we return an instance of the <code>io.rsocket.AbstractRSocket</code> class which is an abstract, no-ops implementation of the <code>RSocket</code>. To add the <code>requestResponse</code> interaction on the receiver part, we have to override existing implementation:</p>
+</div>
+<div class="listingblock">
+<div class="content">
+<pre class="highlight"><code class="language-java" data-lang="java">package com.example.rsocket;
+
+import io.rsocket.AbstractRSocket;
+import io.rsocket.ConnectionSetupPayload;
+import io.rsocket.RSocket;
+import io.rsocket.RSocketFactory;
+import io.rsocket.SocketAcceptor;
+import reactor.core.publisher.Mono;
+import io.rsocket.Payload;
+
+
+public class RSocketPlayground {
+  public static void main(String[] args) {
+    RSocketFactory.ServerRSocketFactory serverRSocketFactory =
+      RSocketFactory.receive();
+
+    RSocketFactory.ServerTransportAcceptor serverTransportAcceptor =
+      serverRSocketFactory.acceptor(new SocketAcceptor() {
+        @Override
+        public Mono&lt;RSocket&gt; accept(
+            ConnectionSetupPayload payload,
+            RSocket connectorRSocket
+        ) {
+          ...
+
+          return Mono.just(new AbstractRSocket() {
+            @Override
+            public Mono&lt;Payload&gt; requestResponse(Payload payload) {    <b class="conum">(1)</b>
+              System.out.println(
+                  "Received Request-Response. " +
+                  "Data: [" + payload.getDataUtf8() + "]. " +          <b class="conum">(2)</b>
+                  "Metadata: [" + payload.getMetadataUtf8() + "]"      <b class="conum">(3)</b>
+              );
+              return Mono.just(payload);                               <b class="conum">(4)</b>
+            }
+          });
+        }
+      });
+
+    ...
+  }
+}</code></pre>
+</div>
+</div>
+<div class="colist arabic">
+<ol>
+<li>
+<p>Declares of the <code>requestResponse</code> handler method that accept a <code>Payload</code> interface;</p>
+</li>
+<li>
+<p>Gets <code>data</code> and converts it to the UTF8 string</p>
+</li>
+<li>
+<p>Gets <code>metadata</code> and converts it to the UTF8 string</p>
+</li>
+<li>
+<p>Returns the same payload back</p>
+</li>
+</ol>
+</div>
+<div class="paragraph">
+<p>The example above shows how we can create the most straightforward handler for <code>requestResponse</code> interaction type.</p>
+</div>
+<div class="paragraph">
+<p>In order to initiate interaction we have to call the <code>requestResponse</code> method on the connector <code>RSocket</code>:</p>
+</div>
+<div class="listingblock">
+<div class="content">
+<pre class="highlight"><code class="language-java" data-lang="java">...
+
+Payload response = rSocket
+  .requestResponse(             <b class="conum">(1)</b>
+    DefaultPayload.create(      <b class="conum">(2)</b>
+      "Hello World Payload",    <b class="conum">(3)</b>
+      "Hello World Metadata"    <b class="conum">(4)</b>
+    )
+  )
+  .block();                     <b class="conum">(5)</b></code></pre>
+</div>
+</div>
+<div class="colist arabic">
+<ol>
+<li>
+<p>Executes <code>requestResponse</code> interaction;</p>
+</li>
+<li>
+<p>Creates instance of the <code>io.rsocket.util.DefaultPayload</code> which is one of the available implementations of <code>Payload</code> interface;</p>
+</li>
+<li>
+<p>Passes <code>Payload</code> data as <code>String</code>;</p>
+</li>
+<li>
+<p>Passes <code>Payload</code> metadata as <code>String</code>;</p>
+</li>
+<li>
+<p>Blocks execution until the successful/exceptional response from the server;</p>
+</li>
+</ol>
+</div>
+<div class="paragraph">
+<p>As we can see from the sample above, we can easily use <code>RSocket</code> API in order to execute plain request response interaction. In turn, RSocket core module provides us with straightforward API in order to construct a <code>Payload</code> instance from either <code>byte`s or `String</code>.</p>
+</div>
+<div class="paragraph">
+<p>By running the code above we observe the following output in the console:</p>
+</div>
+<div class="listingblock">
+<div class="content">
+<pre class="highlight"><code>Received Request-Response. Data: [Hello World]. Metadata: [Hello Metadata]</code></pre>
+</div>
+</div>
+</div>
+</div>
+<div class="sect1">
+<h2 id="_implementing_fire_and_forget">Implementing Fire and Forget</h2>
+<div class="sectionbody">
+<div class="paragraph">
+<p>In order to implement the Fire and Forget handler we have to override the following method in the <code>AbstractRSocket</code> instance we return on the receiver side:</p>
+</div>
+<div class="listingblock">
+<div class="content">
+<pre class="highlight"><code class="language-java" data-lang="java">@Override
+public Mono&lt;Void&gt; fireAndForget(Payload payload) {
+  System.out.println(
+      "Received Fire-And-Forget. " +
+          "Data: [" + payload.getDataUtf8() + "]. " +
+          "Metadata: [" + payload.getMetadataUtf8() + "]"
+  );
+
+  return Mono.delay(Duration.ofDays(1))                      <b class="conum">(1)</b>
+             .then();                                        <b class="conum">(2)</b>
+}</code></pre>
+</div>
+</div>
+<div class="colist arabic">
+<ol>
+<li>
+<p>Return a <code>Mono</code> that delay response for one day;</p>
+</li>
+<li>
+<p>Ignores the result and just propagate <code>onComplete</code> signal when it is appeared.</p>
+</li>
+</ol>
+</div>
+<div class="paragraph">
+<p>The above sample listens for incoming a payload and responds with some long-running delay. With plain request-response interaction, such execution lasts a specified duration. However, let&#8217;s see what it takes with fire and forget case:</p>
+</div>
+<div class="listingblock">
+<div class="content">
+<pre class="highlight"><code class="language-java" data-lang="java">...
+
+System.out.println(                                               <b class="conum">(1)</b>
+  "FireAndForget Called At: [" + Instant.now().toString() + "]"
+);
+rSocket
+  .fireAndForget(                                                 <b class="conum">(2)</b>
+    DefaultPayload.create("Hello FireAndForget")
+  )
+  .doOnSuccess(__ -&gt;
+    System.out.println(                                           <b class="conum">(3)</b>
+      "FireAndForget Done At: [" + Instant.now().toString() + "]"
+    )
+  )
+  .block();</code></pre>
+</div>
+</div>
+<div class="colist arabic">
+<ol>
+<li>
+<p>Prints execution start time;</p>
+</li>
+<li>
+<p>Executes fire and forget call;</p>
+</li>
+<li>
+<p>Handles the completion response;</p>
+</li>
+</ol>
+</div>
+<div class="paragraph">
+<p>Now, if we run that code, we observer in the console logs something like the following:</p>
+</div>
+<div class="listingblock">
+<div class="content">
+<pre class="highlight"><code>FireAndForget Called At: [2019-03-26T16:59:51.056697Z]
+Received Fire-And-Forget. Data: [Hello FireAndForget]. Metadata: []
+FireAndForget Done At: [2019-03-26T16:59:51.070513Z]</code></pre>
+</div>
+</div>
+<div class="paragraph">
+<p>As we can see from the logs above, the difference in time be is tremendously less than 1 Day. In that way, we ensured the mentioned fire-and-forget behavior.</p>
+</div>
+</div>
+</div>
+<div class="sect1">
+<h2 id="_implementing_request_stream_and_request_channel">Implementing Request Stream and Request Channel</h2>
+<div class="sectionbody">
+<div class="paragraph">
+<p>The last but not the least is streaming communication. The following sample shows how we can start using streaming in RSocket receiver side:</p>
+</div>
+<div class="listingblock">
+<div class="content">
+<pre class="highlight"><code class="language-java" data-lang="java">@Override
+public Flux&lt;Payload&gt; requestStream(Payload payload) {                   <b class="conum">(1)</b>
+  System.out.println(
+    "Received Request Stream. " +
+    "Data: [" + payload.getDataUtf8() + "]. " +
+    "Metadata: [" + payload.getMetadataUtf8() + "]"
+  );
+
+  return Flux.range(0, 2)
+    .map(i -&gt; DefaultPayload.create("Stream Response: " + i));          <b class="conum">(2)</b>
+}
+
+@Override
+public Flux&lt;Payload&gt; requestChannel(Publisher&lt;Payload&gt; payloads) {      <b class="conum">(3)</b>
+  System.out.println("Received Request Channel.");
+
+  return Flux
+    .from(payloads)                                                     <b class="conum">(4)</b>
+    .map(incomingPayload -&gt;
+      DefaultPayload
+        .create("Channel Response: " + incomingPayload.getDataUtf8())   <b class="conum">(5)</b>
+    );
+}</code></pre>
+</div>
+</div>
+<div class="colist arabic">
+<ol>
+<li>
+<p>Declares the <code>requestStream</code> method which accept only as single <code>Payload</code>;</p>
+</li>
+<li>
+<p>Responds with <code>FluxRange</code> and <code>.map</code> each element to <code>Payload</code>;</p>
+</li>
+<li>
+<p>Declares the <code>requestChannel</code> method which accepts in that case a <code>Publisher</code> of `Payload`s;</p>
+</li>
+<li>
+<p>Adopts <code>Publisher</code> to Reactor&#8217;s <code>Flux</code>;</p>
+</li>
+<li>
+<p>Maps each incoming <code>Payload</code> from the sender to some echo response <code>Payload</code>;</p>
+</li>
+</ol>
+</div>
+<div class="paragraph">
+<p>Now, we can incorporate <code>requestStream</code> and <code>requestChannel</code> together in order to taste all at once:</p>
+</div>
+<div class="listingblock">
+<div class="content">
+<pre class="highlight"><code class="language-java" data-lang="java">Flux&lt;Payload&gt; requestStreamResponseFlux = rSocket
+  .requestStream(                                     <b class="conum">(1)</b>
+    DefaultPayload.create("Hello Stream-Channel")
+  );
+
+rSocket.requestChannel(requestStreamResponseFlux)     <b class="conum">(2)</b>
+  .doOnNext(p -&gt; System.out.println(                  <b class="conum">(3)</b>
+    "Received Back: " + p.getDataUtf8()
+  ))
+  .blockLast();</code></pre>
+</div>
+</div>
+<div class="colist arabic">
+<ol>
+<li>
+<p>Executes a request Stream call and stores the result <code>Flux</code> into the variable;</p>
+</li>
+<li>
+<p>Executes a request Channel call and passes as an parameter the result from <code>requestStream</code> call;</p>
+</li>
+<li>
+<p>Prints every incoming payload;</p>
+</li>
+</ol>
+</div>
+<div class="paragraph">
+<p>The code above shows used together <code>requestStream</code> and <code>requestChannel</code> calls where the result of <code>requestStream</code> is sending to <code>requestChannel</code> and create some chain of execution in that way. If we run the code mentioned above we observer the following output:</p>
+</div>
+<div class="listingblock">
+<div class="content">
+<pre class="highlight"><code>Received Request Stream. Data: [Hello Stream-Channel]. Metadata: []
+Received Request Channel.
+Received Back: Channel Response: Stream Response: 0
+Received Back: Channel Response: Stream Response: 1</code></pre>
+</div>
+</div>
+<div class="paragraph">
+<p>As we can conclude from the logs, the result stream from <code>requestStream</code> has been sent to <code>requestChannel</code> which finally provided their transformation on the incoming stream.</p>
+</div>
+</div>
+</div>
+<div class="sect1">
+<h2 id="_summary">Summary</h2>
+<div class="sectionbody">
+<div class="paragraph">
+<p>In this blog post, we covered the most straightforward steps to start sending messages from a connector to a receiver.</p>
+</div>
+<div class="paragraph">
+<p>To recap:</p>
+</div>
+<div class="olist arabic">
+<ol class="arabic">
+<li>
+<p>The central data representation in RSocket is a <code>Payload</code> interface.</p>
+</li>
+<li>
+<p>One of the available implementations of <code>Payload</code> is the <code>DefaultPayload</code> class.</p>
+</li>
+<li>
+<p>There are five central interaction types in RSocket.</p>
+</li>
+<li>
+<p>Request-Response allows you to do most wider interaction between client and server.</p>
+</li>
+<li>
+<p>There is an advanced Request-Response called Fire and Forget which allows sending a message without waiting for the response back.</p>
+</li>
+<li>
+<p>There are two interactions which allow handling data streaming.</p>
+</li>
+<li>
+<p>There is an additional <code>requestPush</code> method that allows sending service/meta information to a recipient</p>
+</li>
+</ol>
+</div>
+</div>
+</div>
+<div class="sect1">
+<h2 id="_what_is_next">What is next?</h2>
+<div class="sectionbody">
+<div class="paragraph">
+<p>In the next blog post, we will focus on how to create fully peer to peer interaction between connector and receiver using RSocket-Java.</p>
+</div>
+</div>
+</div>
+
+      
+      <div class="related">
+</div>
+      
+    </div>
+    
+  </div>
+</section>
+
+<section class="section">
+  <div class="container">
+    <aside><div id="disqus_thread"></div></aside>
+  
+    <script type="text/javascript">
+      var disqus_shortname = 'coinen';
+      function disqus() {
+        var dsq = document.createElement('script'); dsq.type = 'text/javascript'; dsq.async = true;
+        dsq.src = '//' + disqus_shortname + '.disqus.com/embed.js';
+        (document.getElementsByTagName('head')[0] || document.getElementsByTagName('body')[0]).appendChild(dsq);
+      }
+  
+      disqus();
+  
+
+    </script>
+    <noscript>Please enable JavaScript to view the <a href="https://disqus.com/?ref_noscript" rel="nofollow">comments powered by Disqus.</a></noscript>
+  </div>
+</section>
+
+
+<section class="section">
+  <div class="container has-text-centered">
+    <p>&copy; <a href="https://github.com/OlegDokuka">Oleh Dokuka</a> 2019</p>
+    
+      <p>Powered by <a href="https://gohugo.io/">Hugo</a> &amp; <a href="https://github.com/ribice/kiss">Kiss</a>.</p>
+    
+  </div>
+</section>
+
+<script type="text/javascript">
+  var _paq = _paq || [];
+  _paq.push(['trackPageView']);
+  _paq.push(['enableLinkTracking']);
+  (function() {
+    var u="\/\/matomo.example.com\/";
+    _paq.push(['setTrackerUrl', u+'piwik.php']);
+    _paq.push(['setSiteId', '1']);
+    var d=document, g=d.createElement('script'), s=d.getElementsByTagName('script')[0];
+    g.type='text/javascript'; g.async=true; g.defer=true; g.src=u+'piwik.js'; s.parentNode.insertBefore(g,s);
+  })();
+</script>
+<noscript>
+  <img src="//matomo.example.com/piwik.php?idsite=1&amp;rec=1" style="border:0" alt="" />
+</noscript>
+
+
+</body>
+</html>
+

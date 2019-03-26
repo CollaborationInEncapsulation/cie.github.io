@@ -248,13 +248,13 @@ public class RSocketPlayground {
 <div class="colist arabic">
 <ol>
 <li>
-<p>Creates an instance of <code>LocalServerTransport</code> and passes it to builder.</p>
+<p>Creates an instance of <code>LocalServerTransport</code> and passes it to builder;</p>
 </li>
 <li>
-<p>Starts RSocket Receiver on the specified transport</p>
+<p>Starts RSocket Receiver on the specified transport;</p>
 </li>
 <li>
-<p>Blocks executing thread by the end of startup process</p>
+<p>Blocks executing thread by the end of startup process;</p>
 </li>
 </ol>
 </div>
@@ -323,6 +323,12 @@ public class RSocketPlayground {
       .transport(LocalServerTransport.create("RSocket-Receiver"))
       .start()
       .block();
+
+    RSocket rSocket = RSocketFactory
+      .connect()
+      .transport(LocalClientTransport.create("RSocket-Receiver"))
+      .start()
+      .block();
   }
 }</code></pre>
 </div>
@@ -332,7 +338,7 @@ public class RSocketPlayground {
 </div>
 <div class="listingblock">
 <div class="content">
-<pre>Received Connection. Data: []. Metadata: []</pre>
+<pre class="highlight"><code>Received Connection. Data: []. Metadata: []</code></pre>
 </div>
 </div>
 <div class="paragraph">
@@ -371,7 +377,7 @@ public class RSocketPlayground {
 <h2 id="_what_is_next">What is next?</h2>
 <div class="sectionbody">
 <div class="paragraph">
-<p>In the next blog post, we will focus on how to start sending data between peers using RSocket-Java.</p>
+<p>In the <a href="../how-to-rsocket-java-basic-interaction">next</a> blog post, we will focus on how to start sending data between peers using RSocket-Java.</p>
 </div>
 </div>
 </div>
