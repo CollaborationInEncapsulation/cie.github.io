@@ -295,7 +295,7 @@ FireAndForget Done At: [2019-03-26T16:59:51.070513Z]&lt;/code&gt;&lt;/pre&gt;
 &lt;/div&gt;
 &lt;/div&gt;
 &lt;div class=&#34;paragraph&#34;&gt;
-&lt;p&gt;As we can see from the logs above, the difference in time be is tremendously less than 1 Day. In that way, we ensured the mentioned fire-and-forget behavior.&lt;/p&gt;
+&lt;p&gt;As we can see from the logs above, the difference in time between the call execution and the response is tremendously less than 1 Day. In that way, we ensured the mentioned fire-and-forget behavior.&lt;/p&gt;
 &lt;/div&gt;
 &lt;/div&gt;
 &lt;/div&gt;
