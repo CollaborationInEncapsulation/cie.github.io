@@ -427,7 +427,7 @@ Received Back: Channel Response: Stream Response: 1&lt;/code&gt;&lt;/pre&gt;
 &lt;p&gt;There are two interactions which allow handling data streaming.&lt;/p&gt;
 &lt;/li&gt;
 &lt;li&gt;
-&lt;p&gt;There is an additional &lt;code&gt;requestPush&lt;/code&gt; method that allows sending service/meta information to a recipient&lt;/p&gt;
+&lt;p&gt;There is an additional &lt;code&gt;metadataPush&lt;/code&gt; method that allows sending service/meta information to a recipient&lt;/p&gt;
 &lt;/li&gt;
 &lt;/ol&gt;
 &lt;/div&gt;
