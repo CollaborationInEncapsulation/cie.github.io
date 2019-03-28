@@ -19,6 +19,15 @@
   </url>
   
   <url>
+    <loc>http://coinen.space/reactor/posts/reactive-hardcore-guide/</loc>
+  </url>
+  
+  <url>
+    <loc>http://coinen.space/reactor/</loc>
+    <priority>0</priority>
+  </url>
+  
+  <url>
     <loc>http://coinen.space/rsocket/</loc>
     <lastmod>2019-03-26T23:05:08+03:00</lastmod>
     <priority>0</priority>

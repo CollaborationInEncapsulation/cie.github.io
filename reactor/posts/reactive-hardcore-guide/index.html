@@ -1,0 +1,1961 @@
+<!DOCTYPE html>
+<html xmlns="http://www.w3.org/1999/xhtml"  lang="en-us">
+<head>
+<meta charset="UTF-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1"/>
+
+<title>Reactive Hardcore Guide | Collaboration In Encapsulation</title>
+
+<meta property='og:title' content='Reactive Hardcore Guide - Collaboration In Encapsulation'>
+<meta property='og:description' content='Setup Checkout the project -&gt; git@github.com:CollaborationInEncapsulation/reactive-hardcore.git Open it in the IDEA. Switch to the part-1-... brunch. Checkout the first commit in the history
+Simple Implementation In this section, you can find all required tests snippets to tests the initial implementation of the Publisher&lt;?&gt;.
+Step 1. Calls order test Reactive-Streams specification mandates that all method of Subscriber MUST be executed in particular order. Past the following code snippet into the org.'>
+<meta property='og:url' content='http://coinen.space/reactor/posts/reactive-hardcore-guide/'>
+<meta property='og:site_name' content='Collaboration In Encapsulation'>
+<meta property='og:type' content='article'><meta property='og:image' content='https://www.gravatar.com/avatar/d8a7b6ff38e865dafa02259ed769eab4?s=256'><meta property='article:author' content='https://facebook.com/oleh.dokuka'><meta property='article:section' content='Reactor'><meta name='twitter:card' content='summary'><meta name='twitter:site' content='@OlehDokuka'><meta name='twitter:creator' content='@OlehDokuka'>
+
+
+<link href="http://coinen.space/index.xml" rel="alternate" type="application/rss+xml" title="Collaboration In Encapsulation" />
+
+<link rel="stylesheet" href="/css/style.css"/><link rel='stylesheet' href='http://coinen.space/css/custom.css'><link rel="apple-touch-icon" sizes="180x180" href="/apple-touch-icon.png">
+<link rel="icon" type="image/png" sizes="32x32" href="/favicon-32x32.png">
+<link rel="icon" type="image/png" sizes="16x16" href="/favicon-16x16.png">
+<link rel="manifest" href="/site.webmanifest">
+<link rel="mask-icon" href="/safari-pinned-tab.svg" color="#5bbad5">
+<meta name="msapplication-TileColor" content="#da532c">
+<meta name="theme-color" content="#ffffff">
+</head>
+<body>
+<section class="section">
+  <div class="container">
+    <nav class="nav">
+      <div class="nav-left">
+        <a class="nav-item" href="http://coinen.space/">
+          <h1 class="title is-4">Collaboration In Encapsulation</h1>
+        </a>
+      </div>
+      <div class="nav-right">
+        <nav class="nav-item level is-mobile"></nav>
+      </div>
+    </nav>
+
+    <nav class="nav">
+      
+
+      
+    </nav>
+
+  </div>
+</section>
+<section class="section">
+  <div class="container">
+    <div class="subtitle tags is-6 is-pulled-right">
+      
+    </div>
+    
+    <h1 class="title">Reactive Hardcore Guide</h1>
+    
+    <div class="content">
+      
+
+<h1 id="setup">Setup</h1>
+
+<p>Checkout the project -&gt; <code>git@github.com:CollaborationInEncapsulation/reactive-hardcore.git</code>
+Open it in the IDEA.
+Switch to the <code>part-1-...</code> brunch.
+Checkout the first commit in the history</p>
+
+<h1 id="simple-implementation">Simple Implementation</h1>
+
+<p>In this section, you can find all required tests snippets to tests the initial implementation of the <code>Publisher&lt;?&gt;</code>.</p>
+
+<h2 id="step-1-calls-order-test">Step 1. Calls order test</h2>
+
+<p>Reactive-Streams specification mandates that all method of <code>Subscriber</code> MUST be executed in particular order. Past the following code snippet into the <code>org.test.reactive.ArrayPublisherTest</code> file to tests expected behavior:</p>
+
+<pre><code class="language-java">@Test
+public void signalsShouldBeEmittedInTheRightOrder() throws InterruptedException {
+    CountDownLatch latch = new CountDownLatch(1);
+    ArrayList&lt;Long&gt; collected = new ArrayList&lt;&gt;();
+    ArrayList&lt;Integer&gt; order = new ArrayList&lt;&gt;();
+    long toRequest = 5L;
+    Long[] array = generate(toRequest);
+    ArrayPublisher&lt;Long&gt; publisher = new ArrayPublisher&lt;&gt;(array);
+
+    publisher.subscribe(new Subscriber&lt;Long&gt;() {
+        @Override
+        public void onSubscribe(Subscription s) {
+            order.add(0);
+            s.request(toRequest);
+        }
+
+        @Override
+        public void onNext(Long aLong) {
+            collected.add(aLong);
+
+            if (!order.contains(1)) {
+                order.add(1);
+            }
+        }
+
+        @Override
+        public void onError(Throwable t) {
+
+        }
+
+        @Override
+        public void onComplete() {
+            order.add(2);
+            latch.countDown();
+        }
+    });
+
+    latch.await(1, TimeUnit.SECONDS);
+
+    Assert.assertEquals(order, Arrays.asList(0, 1, 2));
+    Assert.assertEquals(collected, Arrays.asList(array));
+}
+</code></pre>
+
+<p><details><summary><b>Solution (Don&rsquo;t cheat. In case of Emergency only)</b></summary>
+<p></p>
+
+<p>Call everything one by one:</p>
+
+<pre><code class="language-java">public class ArrayPublisher&lt;T&gt; implements Publisher&lt;T&gt; {
+
+    private final T[] array;
+
+    public ArrayPublisher(T[] array) {
+        this.array = array;
+    }
+
+    @Override
+    public void subscribe(Subscriber&lt;? super T&gt; subscriber) {
+        subscriber.onSubscribe(new Subscription() {
+            @Override
+            public void request(long n) {
+
+            }
+
+            @Override
+            public void cancel() {
+
+            }
+        });
+
+        for (int i = 0; i &lt; array.length; i++) {
+            subscriber.onNext(array[i]);
+        }
+
+        subscriber.onComplete();
+    }
+}
+</code></pre>
+
+<p></p>
+</details></p>
+
+<h2 id="step-2-backpressure-support-test">Step 2. Backpressure support test</h2>
+
+<p>Reactive-Streams specification states that <code>Publisher</code> MUST produce less or equal to the specified number of elements in <code>Subscription#request</code>. Past the following code snippet into the <code>org.test.reactive.ArrayPublisherTest</code> file to tests expected behavior:</p>
+
+<pre><code class="language-java">@Test
+public void mustSupportBackpressureControl() throws InterruptedException {
+    CountDownLatch latch = new CountDownLatch(1);
+    ArrayList&lt;Long&gt; collected = new ArrayList&lt;&gt;();
+    long toRequest = 5L;
+    Long[] array = generate(toRequest);
+    ArrayPublisher&lt;Long&gt; publisher = new ArrayPublisher&lt;&gt;(array);
+    Subscription[] subscription = new Subscription[1];
+
+    publisher.subscribe(new Subscriber&lt;Long&gt;() {
+        @Override
+        public void onSubscribe(Subscription s) {
+            subscription[0] = s;
+        }
+
+        @Override
+        public void onNext(Long aLong) {
+            collected.add(aLong);
+        }
+
+        @Override
+        public void onError(Throwable t) {
+
+        }
+
+        @Override
+        public void onComplete() {
+            latch.countDown();
+        }
+    });
+
+
+    assertEquals(collected, Collections.emptyList());
+
+    subscription[0].request(1);
+    assertEquals(collected, asList(0L));
+
+    subscription[0].request(1);
+    assertEquals(collected, asList(0L, 1L));
+
+    subscription[0].request(2);
+    assertEquals(collected, asList(0L, 1L, 2L, 3L));
+
+    subscription[0].request(20);
+
+    latch.await(1, SECONDS);
+
+    assertEquals(collected, asList(array));
+}
+</code></pre>
+
+<p><details><summary><b>Solution (Don&rsquo;t cheat. In case of Emergency only)</b></summary>
+<p></p>
+
+<p>Store sending logic inside the request method and create an additional field in order to keep the state:</p>
+
+<pre><code class="language-java">public class ArrayPublisher&lt;T&gt; implements Publisher&lt;T&gt; {
+
+    private final T[] array;
+
+    public ArrayPublisher(T[] array) {
+        this.array = array;
+    }
+
+    @Override
+    public void subscribe(Subscriber&lt;? super T&gt; subscriber) {
+        subscriber.onSubscribe(new Subscription() {
+            int index;
+
+            @Override
+            public void request(long n) {
+                for (int i = 0; i &lt; n &amp;&amp; index &lt; array.length; i++, index++) {
+                    subscriber.onNext(array[index]);
+                }
+
+                if (index == array.length) {
+                    subscriber.onComplete();
+                    return;
+                }
+            }
+
+            @Override
+            public void cancel() {
+
+            }
+        });
+    }
+}
+</code></pre>
+
+<p></p>
+</details></p>
+
+<h2 id="step-3-nullpointer-protection-test">Step 3. NullPointer protection test</h2>
+
+<p>Reactive-Streams specification states that null must be avoided in sending to <code>Subscriber</code>. Thus, in case <code>null</code> element is found inside an array, <code>Publisher</code> MUST interrupt by sending <code>onError</code> signal to its subscriber. Past the following code snippet into the <code>org.test.reactive.ArrayPublisherTest</code> file to tests expected behavior:</p>
+
+<pre><code class="language-java">@Test
+public void mustSendNPENormally() throws InterruptedException {
+    CountDownLatch latch = new CountDownLatch(1);
+    Long[] array = new Long[] { null };
+    AtomicReference&lt;Throwable&gt; error = new AtomicReference&lt;&gt;();
+    ArrayPublisher&lt;Long&gt; publisher = new ArrayPublisher&lt;&gt;(array);
+
+    publisher.subscribe(new Subscriber&lt;Long&gt;() {
+        @Override
+        public void onSubscribe(Subscription s) {
+            s.request(4);
+        }
+
+        @Override
+        public void onNext(Long aLong) {
+        }
+
+        @Override
+        public void onError(Throwable t) {
+            error.set(t);
+            latch.countDown();
+        }
+
+        @Override
+        public void onComplete() {
+        }
+    });
+
+    latch.await(1, SECONDS);
+
+    Assert.assertTrue(error.get() instanceof NullPointerException);
+}
+</code></pre>
+
+<p><details><summary><b>Solution (Don&rsquo;t cheat. In case of Emergency only)</b></summary>
+<p></p>
+
+<p>Just check each element on <code>null</code> before sending it downstream. In case of null - send NPE over <code>Subscriber#onError</code>:</p>
+
+<pre><code class="language-java">public class ArrayPublisher&lt;T&gt; implements Publisher&lt;T&gt; {
+
+    private final T[] array;
+
+    public ArrayPublisher(T[] array) {
+        this.array = array;
+    }
+
+    @Override
+    public void subscribe(Subscriber&lt;? super T&gt; subscriber) {
+        subscriber.onSubscribe(new Subscription() {
+            int index;
+
+            @Override
+            public void request(long n) {
+                for (int i = 0; i &lt; n &amp;&amp; index &lt; array.length; i++, index++) {
+                    T element = array[index];
+
+                    if (element == null) {
+                        subscriber.onError(new NullPointerException());
+                        return;
+                    }
+
+                    subscriber.onNext(element);
+                }
+
+                if (index == array.length) {
+                    subscriber.onComplete();
+                    return;
+                }
+            }
+
+            @Override
+            public void cancel() {
+
+            }
+        });
+    }
+}
+</code></pre>
+
+<p></p>
+</details></p>
+
+<h2 id="step-4-infinite-recursion-protection-test">Step 4. Infinite recursion protection test</h2>
+
+<p>It is common that each <code>Subscriber#onNext</code> call can end up with subsequent <code>Subscription#request</code>. Reactive-Streams specification clearly states that Subscriber can synchronously call <code>Subscription</code> and <code>Publisher</code> MUST be protected from recursive calls in the same stack. Past the following code snippet into the <code>org.test.reactive.ArrayPublisherTest</code> file to tests expected behavior:</p>
+
+<pre><code class="language-java">@Test
+public void shouldNotDieInStackOverflow() throws InterruptedException {
+    CountDownLatch latch = new CountDownLatch(1);
+    ArrayList&lt;Long&gt; collected = new ArrayList&lt;&gt;();
+    long toRequest = 1000L;
+    Long[] array = generate(toRequest);
+    ArrayPublisher&lt;Long&gt; publisher = new ArrayPublisher&lt;&gt;(array);
+
+    publisher.subscribe(new Subscriber&lt;Long&gt;() {
+        Subscription s;
+
+        @Override
+        public void onSubscribe(Subscription s) {
+            this.s = s;
+            s.request(1);
+        }
+
+        @Override
+        public void onNext(Long aLong) {
+            collected.add(aLong);
+
+            s.request(1);
+        }
+
+        @Override
+        public void onError(Throwable t) {
+
+        }
+
+        @Override
+        public void onComplete() {
+            latch.countDown();
+        }
+    });
+
+    latch.await(5, SECONDS);
+
+    assertEquals(collected, asList(array));
+}
+</code></pre>
+
+<p><details><summary><b>Solution (Don&rsquo;t cheat. In case of Emergency only)</b></summary>
+<p></p>
+
+<p>Add work in progress check-in in the form of the <code>requested</code> field. It allows checking whether someone sends data or not. In the case of recursion we will protect ourselves since decrement is done at the very end:</p>
+
+<pre><code class="language-java">public class ArrayPublisher&lt;T&gt; implements Publisher&lt;T&gt; {
+
+    private final T[] array;
+
+    public ArrayPublisher(T[] array) {
+        this.array = array;
+    }
+
+    @Override
+    public void subscribe(Subscriber&lt;? super T&gt; subscriber) {
+        subscriber.onSubscribe(new Subscription() {
+            int index;
+            long requested;
+
+            @Override
+            public void request(long n) {
+
+                // if requested &gt; 0, then - someone works
+                long initialRequested = requested;
+
+                requested += n;
+
+                if (initialRequested &gt; 0) {
+                    return;
+                }
+
+                int sent = 0;
+
+                for (; sent &lt; requested &amp;&amp; index &lt; array.length; sent++, index++) {
+                    T element = array[index];
+
+                    if (element == null) {
+                        subscriber.onError(new NullPointerException());
+                        return;
+                    }
+
+                    subscriber.onNext(element);
+                }
+
+                if (index == array.length) {
+                    subscriber.onComplete();
+                    return;
+                }
+
+                requested -= sent;
+            }
+
+            @Override
+            public void cancel() {
+
+            }
+        });
+    }
+}
+</code></pre>
+
+<p></p>
+</details></p>
+
+<h2 id="step-5-cancellation-support-test">Step 5. Cancellation support test</h2>
+
+<p>Reactive-Streams specification states that in case of cancellation, <code>Publisher</code> MUST stop sending data eventually. Past the following code snippet into the <code>org.test.reactive.ArrayPublisherTest</code> file to tests expected behavior:</p>
+
+<pre><code class="language-java">@Test
+public void shouldBePossibleToCancelSubscription() throws InterruptedException {
+    CountDownLatch latch = new CountDownLatch(1);
+    ArrayList&lt;Long&gt; collected = new ArrayList&lt;&gt;();
+    long toRequest = 1000L;
+    Long[] array = generate(toRequest);
+    ArrayPublisher&lt;Long&gt; publisher = new ArrayPublisher&lt;&gt;(array);
+
+    publisher.subscribe(new Subscriber&lt;&gt;() {
+
+        @Override
+        public void onSubscribe(Subscription s) {
+            s.cancel();
+            s.request(toRequest);
+        }
+
+        @Override
+        public void onNext(Long aLong) {
+            collected.add(aLong);
+        }
+
+        @Override
+        public void onError(Throwable t) {
+
+        }
+
+        @Override
+        public void onComplete() {
+            latch.countDown();
+        }
+    });
+
+    latch.await(1, SECONDS);
+
+    assertEquals(collected, Collections.emptyList());
+}
+</code></pre>
+
+<p><details><summary><b>Solution (Don&rsquo;t cheat. In case of Emergency only)</b></summary>
+<p></p>
+
+<p>Add a single <code>boolean</code> flag which can be used during the looping:</p>
+
+<pre><code class="language-java">public class ArrayPublisher&lt;T&gt; implements Publisher&lt;T&gt; {
+
+    private final T[] array;
+
+    public ArrayPublisher(T[] array) {
+        this.array = array;
+    }
+
+    @Override
+    public void subscribe(Subscriber&lt;? super T&gt; subscriber) {
+        subscriber.onSubscribe(new Subscription() {
+            int index;
+            long requested;
+            boolean cancelled;
+
+            @Override
+            public void request(long n) {
+
+                // if requested &gt; 0, then - someone works
+                long initialRequested = requested;
+
+                requested += n;
+
+                if (initialRequested &gt; 0) {
+                    return;
+                }
+
+                int sent = 0;
+
+                for (; sent &lt; requested &amp;&amp; index &lt; array.length; sent++, index++) {
+                    if (cancelled) {
+                        return;
+                    }
+
+                    T element = array[index];
+
+                    if (element == null) {
+                        subscriber.onError(new NullPointerException());
+                        return;
+                    }
+
+                    subscriber.onNext(element);
+                }
+
+                if (cancelled) {
+                    return;
+                }
+
+                if (index == array.length) {
+                    subscriber.onComplete();
+                    return;
+                }
+
+                requested -= sent;
+            }
+
+            @Override
+            public void cancel() {
+                cancelled = true;
+            }
+        });
+    }
+}
+</code></pre>
+
+<p></p>
+</details></p>
+
+<h2 id="step-6-tck-tests-and-missed-implementation-parts">Step 6. TCK tests and missed implementation parts</h2>
+
+<p>Reactive-Streams spec includes more than 40 rules, and it is challenging to verify all corner cases. Fortunately, Reactive-Streams umbrella provides a set of built-in tests that check <code>Publisher</code> against all corner cases. Modify the <code>org.test.reactive.ArrayPublisherTest</code> file according to the following code snippet:</p>
+
+<pre><code class="language-java">public class ArrayPublisherTest extends PublisherVerification&lt;Long&gt; {
+    
+    public ArrayPublisherTest() {
+        super(new TestEnvironment());
+    }
+    
+    @Override
+    public Publisher&lt;Long&gt; createPublisher(long elements) {
+        return new ArrayPublisher&lt;&gt;(generate(elements));
+    }
+    
+    @Override
+    public Publisher&lt;Long&gt; createFailedPublisher() {
+        return null;
+    }
+
+    ... // unchanged
+}
+</code></pre>
+
+<p><details><summary><b>Solution (Don&rsquo;t cheat. In case of Emergency only)</b></summary>
+<p></p>
+
+<p>Add missed verification on negative|zero <code>request(-1|0)</code>:</p>
+
+<pre><code class="language-java">public class ArrayPublisher&lt;T&gt; implements Publisher&lt;T&gt; {
+
+    private final T[] array;
+
+    public ArrayPublisher(T[] array) {
+        this.array = array;
+    }
+
+    @Override
+    public void subscribe(Subscriber&lt;? super T&gt; subscriber) {
+        subscriber.onSubscribe(new Subscription() {
+            int index;
+            long requested;
+            boolean cancelled;
+
+            @Override
+            public void request(long n) {
+
+                // if requested &gt; 0, then - someone works
+                long initialRequested = requested;
+
+                requested += n;
+
+                if (initialRequested &gt; 0) {
+                    return;
+                }
+
+                int sent = 0;
+
+                for (; sent &lt; requested &amp;&amp; index &lt; array.length; sent++, index++) {
+                    if (cancelled) {
+                        return;
+                    }
+
+                    T element = array[index];
+
+                    if (element == null) {
+                        subscriber.onError(new NullPointerException());
+                        return;
+                    }
+
+                    subscriber.onNext(element);
+                }
+
+                if (cancelled) {
+                    return;
+                }
+
+                if (index == array.length) {
+                    subscriber.onComplete();
+                    return;
+                }
+
+                requested -= sent;
+            }
+
+            @Override
+            public void cancel() {
+                cancelled = true;
+            }
+        });
+    }
+}
+</code></pre>
+
+<p></p>
+</details></p>
+
+<h1 id="multi-threading-implementation">Multi-threading implementation</h1>
+
+<h2 id="step-1-concurrency-and-racing-test">Step 1. Concurrency and Racing test</h2>
+
+<p>The reactive-streams spec states that execution can occur in a multi-threading environment. Thus Publisher should be prepared to handle concurrency on it. Past the following code snippet into the <code>org.test.reactive.ArrayPublisherTest</code> file to tests expected behavior:</p>
+
+<pre><code class="language-java">@Test
+public void multithreadingTest() throws InterruptedException {
+    CountDownLatch latch = new CountDownLatch(1);
+    ArrayList&lt;Long&gt; collected = new ArrayList&lt;&gt;();
+    final int n = 5000;
+    Long[] array = generate(n);
+    ArrayPublisher&lt;Long&gt; publisher = new ArrayPublisher&lt;&gt;(array);
+
+    publisher.subscribe(new Subscriber&lt;Long&gt;() {
+        private Subscription s;
+
+        @Override
+        public void onSubscribe(Subscription s) {
+            this.s = s;
+            for (int i = 0; i &lt; n; i++) {
+                commonPool().execute(() -&gt; s.request(1));
+            }
+        }
+
+        @Override
+        public void onNext(Long aLong) {
+            collected.add(aLong);
+        }
+
+        @Override
+        public void onError(Throwable t) {
+
+        }
+
+        @Override
+        public void onComplete() {
+            latch.countDown();
+        }
+    });
+
+    latch.await(2, SECONDS);
+
+    assertEquals(collected, asList(array));
+}
+</code></pre>
+
+<p><details><summary><b>Solution (Don&rsquo;t cheat. In case of Emergency only)</b></summary>
+<p></p>
+
+<p>Use <code>Atomic</code> primitives in order to replace non-thread-safe one. Use an infinite loop in order to avoid the racing issue and dead execution case in the highly concurrent environment:</p>
+
+<pre><code class="language-java">public class ArrayPublisher&lt;T&gt; implements Publisher&lt;T&gt; {
+
+    private final T[] array;
+
+    public ArrayPublisher(T[] array) {
+        this.array = array;
+    }
+
+    @Override
+    public void subscribe(Subscriber&lt;? super T&gt; subscriber) {
+        subscriber.onSubscribe(new Subscription() {
+            AtomicInteger index = new AtomicInteger();
+            AtomicLong requested = new AtomicLong();
+            AtomicBoolean cancelled = new AtomicBoolean();
+
+            @Override
+            public void request(long n) {
+                if (n &lt;= 0 &amp;&amp; !cancelled.get()) {
+                    cancel();
+                    subscriber.onError(new IllegalArgumentException(
+                        &quot;§3.9 violated: positive request amount required but it was &quot; + n
+                    ));
+                    return;
+                }
+
+                long initialRequested = requested.getAndAdd(n);
+
+                if (initialRequested &gt; 0) {
+                    return;
+                }
+
+                int sent = 0;
+
+                while (true) {
+                    for (; sent &lt; requested.get() &amp;&amp; index.get() &lt; array.length; sent++, index.incrementAndGet()) {
+                        if (cancelled.get()) {
+                            return;
+                        }
+
+                        T element = array[index.get()];
+
+                        if (element == null) {
+                            subscriber.onError(new NullPointerException());
+                            return;
+                        }
+
+                        subscriber.onNext(element);
+                    }
+
+                    if (cancelled.get()) {
+                        return;
+                    }
+
+                    if (index.get() == array.length) {
+                        subscriber.onComplete();
+                        return;
+                    }
+
+                    if (requested.addAndGet(-sent) == 0) {
+                        return;
+                    }
+                    sent = 0;
+                }
+            }
+
+            @Override
+            public void cancel() {
+                cancelled.set(true);
+            }
+        });
+    }
+}
+</code></pre>
+
+<p></p>
+</details></p>
+
+<h2 id="step-2-fixes-failed-tests">Step 2. Fixes failed tests.</h2>
+
+<p>Once the tests suite is run against latest code, a hanging test related to <code>request</code> + <code>Long.MAX_VALUE</code> + <code>Long.MAX_VALUE</code> case. Reactive-Streams clearly states that MUST support demand up to <code>Long.MAX_VALUE - 1</code> and everything above that line MAST do not fail execution. Find a proper fix for that solution.</p>
+
+<p><details><summary><b>Solution (Don&rsquo;t cheat. In case of Emergency only)</b></summary>
+<p></p>
+
+<p>Provide a handmade implementation of <code>Atomic#addAndGet</code> which checks/prevents the <code>long</code> overflow case:</p>
+
+<pre><code class="language-java">public class ArrayPublisher&lt;T&gt; implements Publisher&lt;T&gt; {
+
+    private final T[] array;
+
+    public ArrayPublisher(T[] array) {
+        this.array = array;
+    }
+
+    @Override
+    public void subscribe(Subscriber&lt;? super T&gt; subscriber) {
+        subscriber.onSubscribe(new Subscription() {
+            AtomicInteger index = new AtomicInteger();
+            AtomicLong requested = new AtomicLong();
+            AtomicBoolean cancelled = new AtomicBoolean();
+
+            @Override
+            public void request(long n) {
+                if (n &lt;= 0 &amp;&amp; !cancelled.get()) {
+                    cancel();
+                    subscriber.onError(new IllegalArgumentException(
+                        &quot;§3.9 violated: positive request amount required but it was &quot; + n
+                    ));
+                    return;
+                }
+
+                long initialRequested;
+
+                do {
+                    initialRequested = requested.get();
+
+                    if (initialRequested == Long.MAX_VALUE) {
+                        return;
+                    }
+
+                    n = initialRequested + n;
+
+                    if (n &lt;= 0) {
+                        n = Long.MAX_VALUE;
+                    }
+
+                } while (!requested.weakCompareAndSetVolatile(initialRequested, n));
+
+                if (initialRequested &gt; 0) {
+                    return;
+                }
+
+                int sent = 0;
+
+                while (true) {
+                    for (; sent &lt; requested.get() &amp;&amp; index.get() &lt; array.length; sent++, index.incrementAndGet()) {
+                        if (cancelled.get()) {
+                            return;
+                        }
+
+                        T element = array[index.get()];
+
+                        if (element == null) {
+                            subscriber.onError(new NullPointerException());
+                            return;
+                        }
+
+                        subscriber.onNext(element);
+                    }
+
+                    if (cancelled.get()) {
+                        return;
+                    }
+
+                    if (index.get() == array.length) {
+                        subscriber.onComplete();
+                        return;
+                    }
+
+                    if (requested.addAndGet(-sent) == 0) {
+                        return;
+                    }
+                    sent = 0;
+                }
+            }
+
+            @Override
+            public void cancel() {
+                cancelled.set(true);
+            }
+        });
+    }
+}
+</code></pre>
+
+<p></p>
+</details></p>
+
+<h1 id="optimized-implementation">Optimized Implementation</h1>
+
+<p>In this section, we are going to push to the possible max the performance of the constructed <code>Publisher</code>. However, there are no optimizations without the proved fact of it. As a result of this, we MUST use the proper benchmark solution for that. This time we are going to use JMH microbenchmark test suite. Uncomment <code>org.test.reactive.UnoptimizedArrayPublisher</code> source code which is a copy of the current implementation. Remove all commented lines of code inside <code>org.test.reactive.ArrayPublisherPerfTest</code>.</p>
+
+<h2 id="step-1-eliminate-redundant-thread-safety">Step 1. Eliminate redundant thread-safety.</h2>
+
+<p>There is a field that does not require thread-safety at all. Find it and simplify the solution.</p>
+
+<p><details><summary><b>Solution (Don&rsquo;t cheat. In case of Emergency only)</b></summary>
+<p></p>
+
+<p>The <code>index</code> is inside WIP (work in progress) loop which guarantees exclusive access to the execution within its bounds. In turn, JMM guarantees that all changes that happens-before the write to a volatile field will be visible once that field is read. That means that changes on the <code>index</code> field will be available for any reader for <code>requested</code> field.</p>
+
+<p>The following is a raw benchamarks of the changes available in the code below the results summary (about +32% ☝️in performance):</p>
+
+<pre><code class="language-console"># JMH version: 1.21
+# VM version: JDK 11.0.1, OpenJDK 64-Bit Server VM, 11.0.1+13
+# VM invoker: /Library/Java/JavaVirtualMachines/jdk-11.0.1.jdk/Contents/Home/bin/java
+# Warmup: 2 iterations, 10 s each
+# Measurement: 3 iterations, 3 s each
+# Timeout: 10 min per iteration
+# Threads: 1 thread, will synchronize iterations
+# Benchmark mode: Throughput, ops/time
+
+# Benchmark: org.test.reactive.ArrayPublisherPerfTest.publisherPerformance
+# Benchmark: org.test.reactive.ArrayPublisherPerfTest.unoptimizedPublisherPerformance
+# Parameters: (times = 1000000)
+
+Benchmark                                               (times)   Mode  Cnt   Score    Error  Units
+ArrayPublisherPerfTest.publisherPerformance             1000000  thrpt    3  84.141 ± 20.202  ops/s
+ArrayPublisherPerfTest.unoptimizedPublisherPerformance  1000000  thrpt    3  63.593 ±  2.014  ops/s
+</code></pre>
+
+<pre><code class="language-java">public class ArrayPublisher&lt;T&gt; implements Publisher&lt;T&gt; {
+
+    private final T[] array;
+
+    public ArrayPublisher(T[] array) {
+        this.array = array;
+    }
+
+    @Override
+    public void subscribe(Subscriber&lt;? super T&gt; subscriber) {
+        subscriber.onSubscribe(new Subscription() {
+            AtomicInteger index = new AtomicInteger();
+            AtomicLong requested = new AtomicLong();
+            AtomicBoolean cancelled = new AtomicBoolean();
+
+            @Override
+            public void request(long n) {
+                if (n &lt;= 0 &amp;&amp; !cancelled.get()) {
+                    cancel();
+                    subscriber.onError(new IllegalArgumentException(
+                        &quot;§3.9 violated: positive request amount required but it was &quot; + n
+                    ));
+                    return;
+                }
+
+                long initialRequested;
+
+                do {
+                    initialRequested = requested.get();
+
+                    if (initialRequested == Long.MAX_VALUE) {
+                        return;
+                    }
+
+                    n = initialRequested + n;
+
+                    if (n &lt;= 0) {
+                        n = Long.MAX_VALUE;
+                    }
+
+                } while (!requested.weakCompareAndSetVolatile(initialRequested, n));
+
+                if (initialRequested &gt; 0) {
+                    return;
+                }
+
+                int sent = 0;
+
+                while (true) {
+                    for (; sent &lt; requested.get() &amp;&amp; index.get() &lt; array.length; sent++, index.incrementAndGet()) {
+                        if (cancelled.get()) {
+                            return;
+                        }
+
+                        T element = array[index.get()];
+
+                        if (element == null) {
+                            subscriber.onError(new NullPointerException());
+                            return;
+                        }
+
+                        subscriber.onNext(element);
+                    }
+
+                    if (cancelled.get()) {
+                        return;
+                    }
+
+                    if (index.get() == array.length) {
+                        subscriber.onComplete();
+                        return;
+                    }
+
+                    if (requested.addAndGet(-sent) == 0) {
+                        return;
+                    }
+                    sent = 0;
+                }
+            }
+
+            @Override
+            public void cancel() {
+                cancelled.set(true);
+            }
+        });
+    }
+}
+</code></pre>
+
+<p></p>
+</details></p>
+
+<h2 id="step-2-eliminate-redundant-volatile-operations-fields-access-optimizations">Step 2. Eliminate redundant volatile operations. Fields access optimizations</h2>
+
+<p>Copy current code to the <code>org.test.reactive.UnoptimizedArrayPublisher</code> in order to observe optimization after each measurement.</p>
+
+<p>The code contains redundant volatile operations that can be reduced. Analyze which operations can be done in the bulk (bulk access includes movement to local stack, etc).</p>
+
+<p><details><summary><b>Solution (Don&rsquo;t cheat. In case of Emergency only)</b></summary>
+<p></p>
+
+<p>Reading of the <code>requested</code> during looping is redundant. Once the worker entered the critical section, the given <code>n</code> is equal to current <code>requested</code>. Thus we can rely on its value and update it at the end of the loop.
+General bulk writes to index field + optimizing access to <code>index</code>, <code>array</code>, <code>array.lenght</code> from the local stack can save from 4 to 8 (or even more) CPU instructions which can optimize performance in turn.</p>
+
+<p>The following is a raw benchamarks of the changes available in the code below the results summary (about +(1-5)% grows in performance depends on the first request size):</p>
+
+<pre><code class="language-console"># JMH version: 1.21
+# VM version: JDK 11.0.1, OpenJDK 64-Bit Server VM, 11.0.1+13
+# VM invoker: /Library/Java/JavaVirtualMachines/jdk-11.0.1.jdk/Contents/Home/bin/java
+# Warmup: 2 iterations, 10 s each
+# Measurement: 5 iterations, 10 s each
+# Timeout: 10 min per iteration
+# Threads: 1 thread, will synchronize iterations
+# Benchmark mode: Throughput, ops/time
+
+# Benchmark: org.test.reactive.ArrayPublisherPerfTest.publisherPerformance
+# Benchmark: org.test.reactive.ArrayPublisherPerfTest.unoptimizedPublisherPerformance
+# Parameters: (times = 1000000)
+
+Benchmark                                               (times)   Mode  Cnt   Score   Error  Units
+ArrayPublisherPerfTest.publisherPerformance             1000000  thrpt    5  97.334 ± 6.454  ops/s
+ArrayPublisherPerfTest.unoptimizedPublisherPerformance  1000000  thrpt    5  93.842 ± 1.397  ops/s
+</code></pre>
+
+<pre><code class="language-java">public class ArrayPublisher&lt;T&gt; implements Publisher&lt;T&gt; {
+
+    private final T[] array;
+
+    public ArrayPublisher(T[] array) {
+        this.array = array;
+    }
+
+    @Override
+    public void subscribe(Subscriber&lt;? super T&gt; subscriber) {
+        subscriber.onSubscribe(new Subscription() {
+            int index;
+            AtomicLong requested = new AtomicLong();
+            AtomicBoolean cancelled = new AtomicBoolean();
+
+            @Override
+            public void request(long n) {
+                if (n &lt;= 0 &amp;&amp; !cancelled.get()) {
+                    cancel();
+                    subscriber.onError(new IllegalArgumentException(
+                        &quot;§3.9 violated: positive request amount required but it was &quot; + n
+                    ));
+                    return;
+                }
+
+                long initialRequested;
+
+                do {
+                    initialRequested = requested.get();
+
+                    if (initialRequested == Long.MAX_VALUE) {
+                        return;
+                    }
+
+                    n = initialRequested + n;
+
+                    if (n &lt;= 0) {
+                        n = Long.MAX_VALUE;
+                    }
+
+                } while (!requested.weakCompareAndSetVolatile(initialRequested, n));
+
+                if (initialRequested &gt; 0) {
+                    return;
+                }
+
+                final T[] arr = ArrayPublisher.this.array;
+                int sent = 0;
+                int i = index;
+                int length = arr.length;
+
+                while (true) {
+                    for (; sent &lt; n &amp;&amp; i &lt; length; sent++, i++) {
+                        if (cancelled.get()) {
+                            return;
+                        }
+
+                        T element = arr[i];
+
+                        if (element == null) {
+                            subscriber.onError(new NullPointerException());
+                            return;
+                        }
+
+                        subscriber.onNext(element);
+                    }
+
+                    if (cancelled.get()) {
+                        return;
+                    }
+
+                    if (i == length) {
+                        subscriber.onComplete();
+                        return;
+                    }
+
+                    n = requested.get();
+                    if (n == sent) {
+                        index = i;
+                        if (requested.addAndGet(-sent) == 0) {
+                            return;
+                        }
+                        sent = 0;
+                    }
+                }
+            }
+
+            @Override
+            public void cancel() {
+                cancelled.set(true);
+            }
+        });
+    }
+}
+</code></pre>
+
+<p></p>
+</details></p>
+
+<h2 id="step-3-optimize-a-number-of-produced-objects-for-gc">Step 3. Optimize a number of produced objects for GC.</h2>
+
+<p>Work done by GC impacts performance a lot. Let&rsquo;s reduce the number of object in order to keep garbage clean. Copy latest source of actual <code>ArrayPublisher</code> to the <code>org.test.reactive.UnoptimizedArrayPublisher</code> again.</p>
+
+<p><details><summary><b>Solution (Don&rsquo;t cheat. In case of Emergency only)</b></summary>
+<p></p>
+
+<p>Reducing the number of a produced object by replacing <code>cancelled</code> field with a plain volatile (no write racing - thus can be just a plain volatile) and replacing <code>AtomicLong</code> with an identical <code>AtomicLongFieldUpdater</code> + <code>volatile requested</code> we can win another few % of performance.</p>
+
+<p>The following is a raw benchamarks of the changes available in the code below the results summary (about +(2-5)% grows in performance depends on the elements in the <code>Publisher</code>):</p>
+
+<pre><code class="language-console"># JMH version: 1.21
+# VM version: JDK 11.0.1, OpenJDK 64-Bit Server VM, 11.0.1+13
+# VM invoker: /Library/Java/JavaVirtualMachines/jdk-11.0.1.jdk/Contents/Home/bin/java
+# Warmup: 2 iterations, 10 s each
+# Measurement: 5 iterations, 10 s each
+# Timeout: 10 min per iteration
+# Threads: 1 thread, will synchronize iterations
+# Benchmark mode: Throughput, ops/time
+
+# Benchmark: org.test.reactive.ArrayPublisherPerfTest.publisherPerformance
+# Benchmark: org.test.reactive.ArrayPublisherPerfTest.unoptimizedPublisherPerformance
+# Parameters: (times = 10)
+# Parameters: (times = 1000000)
+
+Benchmark                                               (times)   Mode  Cnt        Score        Error  Units
+ArrayPublisherPerfTest.publisherPerformance                  10  thrpt    5  8784517.598 ± 526494.471  ops/s
+ArrayPublisherPerfTest.publisherPerformance             1000000  thrpt    5      100.878 ±      2.055  ops/s
+ArrayPublisherPerfTest.unoptimizedPublisherPerformance       10  thrpt    5  8414885.985 ± 514022.929  ops/s
+ArrayPublisherPerfTest.unoptimizedPublisherPerformance  1000000  thrpt    5       98.818 ±      1.076  ops/s
+</code></pre>
+
+<pre><code class="language-java">public class ArrayPublisher&lt;T&gt; implements Publisher&lt;T&gt; {
+
+    private final T[] array;
+
+    public ArrayPublisher(T[] array) {
+        this.array = array;
+    }
+
+    @Override
+    public void subscribe(Subscriber&lt;? super T&gt; subscriber) {
+        subscriber.onSubscribe(new ArraySubscription&lt;T&gt;(array, subscriber));
+    }
+
+    private static class ArraySubscription&lt;T&gt; implements Subscription {
+
+        final T[] array;
+        final Subscriber&lt;? super T&gt; subscriber;
+
+        int index;
+
+        volatile long requested;
+        static final AtomicLongFieldUpdater&lt;ArraySubscription&gt; REQUESTED =
+            AtomicLongFieldUpdater.newUpdater(ArraySubscription.class, &quot;requested&quot;);
+
+        volatile boolean cancelled;
+
+        public ArraySubscription(T[] array, Subscriber&lt;? super T&gt; subscriber) {
+            this.array = array;
+            this.subscriber = subscriber;
+        }
+
+        @Override
+        public void request(long n) {
+            if (n &lt;= 0 &amp;&amp; !cancelled) {
+                cancel();
+                subscriber.onError(new IllegalArgumentException(
+                    &quot;§3.9 violated: positive request amount required but it was &quot; + n
+                ));
+                return;
+            }
+
+            long initialRequested;
+
+            do {
+                initialRequested = requested;
+
+                if (initialRequested == Long.MAX_VALUE) {
+                    return;
+                }
+
+                n = initialRequested + n;
+
+                if (n &lt;= 0) {
+                    n = Long.MAX_VALUE;
+                }
+
+            } while (!REQUESTED.compareAndSet(this, initialRequested, n));
+
+            if (initialRequested &gt; 0) {
+                return;
+            }
+
+            final Subscriber&lt;? super T&gt; s = subscriber;
+            final T[] arr = array;
+            int sent = 0;
+            int i = index;
+            int length = arr.length;
+
+            while (true) {
+                for (; sent &lt; n &amp;&amp; i &lt; length; sent++, i++) {
+                    if (cancelled) {
+                        return;
+                    }
+
+                    T element = arr[i];
+
+                    if (element == null) {
+                        s.onError(new NullPointerException());
+                        return;
+                    }
+
+                    s.onNext(element);
+                }
+
+                if (cancelled) {
+                    return;
+                }
+
+                if (i == length) {
+                    s.onComplete();
+                    return;
+                }
+
+                n = requested;
+                if (n == sent) {
+                    index = i;
+                    if (REQUESTED.addAndGet(this, -sent) == 0) {
+                        return;
+                    }
+                    sent = 0;
+                }
+            }
+        }
+
+        @Override
+        public void cancel() {
+            cancelled = true;
+        }
+    }
+}
+</code></pre>
+
+<p></p>
+</details></p>
+
+<h2 id="step-4-optimize-execution-path">Step 4. Optimize execution path</h2>
+
+<p>Reactive-Streams states that if request size is equal to <code>Long.MAX_VALUE</code> we can simply turn execution into the pure push model without counting/decreasing <code>requested</code> field. Optimize the code according to the suggestion.</p>
+
+<p><details><summary><b>Solution (Don&rsquo;t cheat. In case of Emergency only)</b></summary>
+<p></p>
+
+<p>Introducing the fast path can significantly improve performance in case of <code>Long.MAX_VALUE</code> request!</p>
+
+<p>The following is a raw benchamarks of the changes available in the code below the results summary (about +(7-25)% grows in performance depends on the elements in the <code>Publisher</code>):</p>
+
+<pre><code class="language-console"># JMH version: 1.21
+# VM version: JDK 11.0.1, OpenJDK 64-Bit Server VM, 11.0.1+13
+# VM invoker: /Library/Java/JavaVirtualMachines/jdk-11.0.1.jdk/Contents/Home/bin/java
+# Warmup: 2 iterations, 10 s each
+# Measurement: 5 iterations, 10 s each
+# Timeout: 10 min per iteration
+# Threads: 1 thread, will synchronize iterations
+# Benchmark mode: Throughput, ops/time
+
+# Benchmark: org.test.reactive.ArrayPublisherPerfTest.publisherPerformance
+# Benchmark: org.test.reactive.ArrayPublisherPerfTest.unoptimizedPublisherPerformance
+# Parameters: (times = 10)
+# Parameters: (times = 1000000)
+
+Benchmark                                               (times)   Mode  Cnt         Score        Error  Units
+ArrayPublisherPerfTest.publisherPerformance                  10  thrpt    5  26441416.821 ± 879311.200  ops/s
+ArrayPublisherPerfTest.publisherPerformance             1000000  thrpt    5       330.283 ±     12.811  ops/s
+ArrayPublisherPerfTest.unoptimizedPublisherPerformance       10  thrpt    5  24602782.049 ± 541028.105  ops/s
+ArrayPublisherPerfTest.unoptimizedPublisherPerformance  1000000  thrpt    5       263.150 ±      4.910  ops/s
+</code></pre>
+
+<pre><code class="language-java">public class ArrayPublisher&lt;T&gt; implements Publisher&lt;T&gt; {
+
+    private final T[] array;
+
+    public ArrayPublisher(T[] array) {
+        this.array = array;
+    }
+
+    @Override
+    public void subscribe(Subscriber&lt;? super T&gt; subscriber) {
+        subscriber.onSubscribe(new ArraySubscription&lt;T&gt;(array, subscriber));
+    }
+
+    private static class ArraySubscription&lt;T&gt; implements Subscription {
+
+        final T[] array;
+        final Subscriber&lt;? super T&gt; subscriber;
+
+        int index;
+
+        volatile long requested;
+        static final AtomicLongFieldUpdater&lt;ArraySubscription&gt; REQUESTED =
+            AtomicLongFieldUpdater.newUpdater(ArraySubscription.class, &quot;requested&quot;);
+
+        volatile boolean cancelled;
+
+        public ArraySubscription(T[] array, Subscriber&lt;? super T&gt; subscriber) {
+            this.array = array;
+            this.subscriber = subscriber;
+        }
+
+        @Override
+        public void request(long n) {
+            if (n &lt;= 0 &amp;&amp; !cancelled) {
+                cancel();
+                subscriber.onError(new IllegalArgumentException(
+                    &quot;§3.9 violated: positive request amount required but it was &quot; + n
+                ));
+                return;
+            }
+
+            long initialRequested;
+
+            do {
+                initialRequested = requested;
+
+                if (initialRequested == Long.MAX_VALUE) {
+                    return;
+                }
+
+                n = initialRequested + n;
+
+                if (n &lt;= 0) {
+                    n = Long.MAX_VALUE;
+                }
+
+            } while (!REQUESTED.compareAndSet(this, initialRequested, n));
+
+            if (initialRequested &gt; 0) {
+                return;
+            }
+
+            if (n == Long.MAX_VALUE) {
+                fastPath();
+            }
+            else {
+                slowPath(n);
+            }
+        }
+
+        void fastPath() {
+            final Subscriber&lt;? super T&gt; s = subscriber;
+            final T[] arr = array;
+            int i = index;
+            int length = arr.length;
+
+            for (; i &lt; length; i++) {
+                if (cancelled) {
+                    return;
+                }
+
+                T element = arr[i];
+
+                if (element == null) {
+                    s.onError(new NullPointerException());
+                    return;
+                }
+
+                s.onNext(element);
+            }
+
+            if (cancelled) {
+                return;
+            }
+
+            s.onComplete();
+        }
+
+        void slowPath(long n) {
+            final Subscriber&lt;? super T&gt; s = subscriber;
+            final T[] arr = array;
+            int sent = 0;
+            int i = index;
+            int length = arr.length;
+
+            while (true) {
+                for (; sent &lt; n &amp;&amp; i &lt; length; sent++, i++) {
+                    if (cancelled) {
+                        return;
+                    }
+
+                    T element = arr[i];
+
+                    if (element == null) {
+                        s.onError(new NullPointerException());
+                        return;
+                    }
+
+                    s.onNext(element);
+                }
+
+                if (cancelled) {
+                    return;
+                }
+
+                if (i == length) {
+                    s.onComplete();
+                    return;
+                }
+
+                n = requested;
+                if (n == sent) {
+                    index = i;
+                    if (REQUESTED.addAndGet(this, -sent) == 0) {
+                        return;
+                    }
+                    sent = 0;
+                }
+            }
+        }
+
+        @Override
+        public void cancel() {
+            cancelled = true;
+        }
+    }
+}
+</code></pre>
+
+<p></p>
+</details></p>
+
+<h1 id="dive-deeper-solving-orders-processing-case">Dive deeper. Solving Orders Processing case.</h1>
+
+<p>Switch to the <code>part-2-...</code> brunch. Checkout the commit with <code>Part 2 message</code></p>
+
+<p>It is time to apply what we built in order to solve the real problem of processing users orders. To solve our problem, we need a few operators:</p>
+
+<ul>
+<li>Map</li>
+<li>Filter</li>
+<li>Take</li>
+<li>PublishOn</li>
+</ul>
+
+<h2 id="step-1-building-map-operator">Step 1. Building Map operator</h2>
+
+<p>The next challenge is to implement an intermediate operator. Let&rsquo;s start with the simplest one. Try to find out what is the required structure for the intermediate operator, how to chain it with the main source, etc.</p>
+
+<p><details><summary><b>Solution (Don&rsquo;t cheat. In case of Emergency only)</b></summary>
+<p></p>
+
+<pre><code class="language-java">public class MapPublisher&lt;T, R&gt; implements Publisher&lt;R&gt; {
+
+    final Publisher&lt;? extends T&gt; source;
+    final Function&lt;? super T, ? extends R&gt; mapper;
+
+    public MapPublisher(Publisher&lt;? extends T&gt; source,
+        Function&lt;? super T, ? extends R&gt; mapper) {
+
+        this.source = source;
+        this.mapper = mapper;
+    }
+
+    @Override
+    public void subscribe(Subscriber&lt;? super R&gt; s) {
+        source.subscribe(new MapOperator&lt;&gt;(s, mapper));
+    }
+
+    private static final class MapOperator&lt;T, R&gt; implements Subscriber&lt;T&gt;, Subscription {
+
+        final Subscriber&lt;? super R&gt;            actual;
+        final Function&lt;? super T, ? extends R&gt; mapper;
+
+        Subscription s;
+        boolean done;
+
+        private MapOperator(
+            Subscriber&lt;? super R&gt; actual,
+            Function&lt;? super T, ? extends R&gt; mapper
+        ) {
+            this.actual = actual;
+            this.mapper = mapper;
+        }
+
+        @Override
+        public void onSubscribe(Subscription s) {
+            this.s = s;
+            actual.onSubscribe(this);
+        }
+
+        @Override
+        public void onNext(T element) {
+            if (done) {
+                return;
+            }
+
+            R mappedElement;
+
+            try {
+                mappedElement = Objects.requireNonNull(mapper.apply(element));
+            } catch (Throwable t) {
+                s.cancel();
+                onError(t);
+                return;
+            }
+
+            actual.onNext(mappedElement);
+        }
+
+        @Override
+        public void onError(Throwable t) {
+            if (done) {
+                return;
+            }
+
+            done = true;
+            actual.onError(t);
+        }
+
+        @Override
+        public void onComplete() {
+            if (done) {
+                return;
+            }
+
+            done = true;
+            actual.onComplete();
+        }
+
+        @Override
+        public void request(long n) {
+            s.request(n);
+        }
+
+        @Override
+        public void cancel() {
+            s.cancel();
+        }
+    }
+}
+</code></pre>
+
+<p></p>
+</details></p>
+
+<h2 id="step-2-building-rest-of-the-operators">Step 2. Building Rest of the operators</h2>
+
+<p>Following the same code convention, implement the rest of the operators</p>
+
+<p><details><summary><b>Solution (Don&rsquo;t cheat. In case of Emergency only)</b></summary>
+<p></p>
+
+<pre><code class="language-java">public class FilterPublisher&lt;T&gt; implements Publisher&lt;T&gt; {
+
+    final Publisher&lt;? extends T&gt; source;
+    final Predicate&lt;? super T&gt; filter;
+
+    public FilterPublisher(Publisher&lt;? extends T&gt; source,
+        Predicate&lt;? super T&gt; filter) {
+
+        this.source = source;
+        this.filter = filter;
+    }
+
+    @Override
+    public void subscribe(Subscriber&lt;? super T&gt; s) {
+        source.subscribe(new FilterOperator&lt;&gt;(s, filter));
+    }
+
+    private static final class FilterOperator&lt;T&gt; implements Subscriber&lt;T&gt;, Subscription {
+
+        final Subscriber&lt;? super T&gt; actual;
+        final Predicate&lt;? super T&gt;  filter;
+
+        Subscription s;
+        boolean done;
+
+        private FilterOperator(
+            Subscriber&lt;? super T&gt; actual,
+            Predicate&lt;? super T&gt; filter
+        ) {
+            this.actual = actual;
+            this.filter = filter;
+        }
+
+        @Override
+        public void onSubscribe(Subscription s) {
+            this.s = s;
+            actual.onSubscribe(this);
+        }
+
+        @Override
+        public void onNext(T element) {
+            if (done) {
+                return;
+            }
+
+            boolean result;
+
+            try {
+                result = filter.test(element);
+            } catch (Throwable t) {
+                s.cancel();
+                onError(t);
+                return;
+            }
+
+            if (result) {
+                actual.onNext(element);
+            }
+            else {
+                s.request(1);
+            }
+        }
+
+        @Override
+        public void onError(Throwable t) {
+            if (done) {
+                return;
+            }
+
+            done = true;
+            actual.onError(t);
+        }
+
+        @Override
+        public void onComplete() {
+            if (done) {
+                return;
+            }
+
+            done = true;
+            actual.onComplete();
+        }
+
+        @Override
+        public void request(long n) {
+            s.request(n);
+        }
+
+        @Override
+        public void cancel() {
+            s.cancel();
+        }
+    }
+}
+</code></pre>
+
+<pre><code class="language-java">public class FilterPublisher&lt;T&gt; implements Publisher&lt;T&gt; {
+
+    final Publisher&lt;? extends T&gt; source;
+    final Predicate&lt;? super T&gt; filter;
+
+    public FilterPublisher(Publisher&lt;? extends T&gt; source,
+        Predicate&lt;? super T&gt; filter) {
+
+        this.source = source;
+        this.filter = filter;
+    }
+
+    @Override
+    public void subscribe(Subscriber&lt;? super T&gt; s) {
+        source.subscribe(new FilterOperator&lt;&gt;(s, filter));
+    }
+
+    private static final class FilterOperator&lt;T&gt; implements Subscriber&lt;T&gt;, Subscription {
+
+        final Subscriber&lt;? super T&gt; actual;
+        final Predicate&lt;? super T&gt;  filter;
+
+        Subscription s;
+        boolean done;
+
+        private FilterOperator(
+            Subscriber&lt;? super T&gt; actual,
+            Predicate&lt;? super T&gt; filter
+        ) {
+            this.actual = actual;
+            this.filter = filter;
+        }
+
+        @Override
+        public void onSubscribe(Subscription s) {
+            this.s = s;
+            actual.onSubscribe(this);
+        }
+
+        @Override
+        public void onNext(T element) {
+            if (done) {
+                return;
+            }
+
+            boolean result;
+
+            try {
+                result = filter.test(element);
+            } catch (Throwable t) {
+                s.cancel();
+                onError(t);
+                return;
+            }
+
+            if (result) {
+                actual.onNext(element);
+            }
+            else {
+                s.request(1);
+            }
+        }
+
+        @Override
+        public void onError(Throwable t) {
+            if (done) {
+                return;
+            }
+
+            done = true;
+            actual.onError(t);
+        }
+
+        @Override
+        public void onComplete() {
+            if (done) {
+                return;
+            }
+
+            done = true;
+            actual.onComplete();
+        }
+
+        @Override
+        public void request(long n) {
+            s.request(n);
+        }
+
+        @Override
+        public void cancel() {
+            s.cancel();
+        }
+    }
+}
+</code></pre>
+
+<p></p>
+</details></p>
+
+<h1 id="step-3-implement-it-in-a-reactive-way">Step 3 implement it in a reactive way</h1>
+
+<p>Use created operators in order to implement the business logic of the app.</p>
+
+<p><details><summary><b>Solution (Don&rsquo;t cheat. In case of Emergency only)</b></summary>
+<p></p>
+
+<pre><code class="language-java">public class FilterPublisher&lt;T&gt; implements Publisher&lt;T&gt; {
+
+    final Publisher&lt;? extends T&gt; source;
+    final Predicate&lt;? super T&gt; filter;
+
+    public FilterPublisher(Publisher&lt;? extends T&gt; source,
+        Predicate&lt;? super T&gt; filter) {
+
+        this.source = source;
+        this.filter = filter;
+    }
+
+    @Override
+    public void subscribe(Subscriber&lt;? super T&gt; s) {
+        source.subscribe(new FilterOperator&lt;&gt;(s, filter));
+    }
+
+    private static final class FilterOperator&lt;T&gt; implements Subscriber&lt;T&gt;, Subscription {
+
+        final Subscriber&lt;? super T&gt; actual;
+        final Predicate&lt;? super T&gt;  filter;
+
+        Subscription s;
+        boolean done;
+
+        private FilterOperator(
+            Subscriber&lt;? super T&gt; actual,
+            Predicate&lt;? super T&gt; filter
+        ) {
+            this.actual = actual;
+            this.filter = filter;
+        }
+
+        @Override
+        public void onSubscribe(Subscription s) {
+            this.s = s;
+            actual.onSubscribe(this);
+        }
+
+        @Override
+        public void onNext(T element) {
+            if (done) {
+                return;
+            }
+
+            boolean result;
+
+            try {
+                result = filter.test(element);
+            } catch (Throwable t) {
+                s.cancel();
+                onError(t);
+                return;
+            }
+
+            if (result) {
+                actual.onNext(element);
+            }
+            else {
+                s.request(1);
+            }
+        }
+
+        @Override
+        public void onError(Throwable t) {
+            if (done) {
+                return;
+            }
+
+            done = true;
+            actual.onError(t);
+        }
+
+        @Override
+        public void onComplete() {
+            if (done) {
+                return;
+            }
+
+            done = true;
+            actual.onComplete();
+        }
+
+        @Override
+        public void request(long n) {
+            s.request(n);
+        }
+
+        @Override
+        public void cancel() {
+            s.cancel();
+        }
+    }
+}
+</code></pre>
+
+<p></p>
+</details></p>
+
+      
+      <div class="related">
+</div>
+      
+    </div>
+    
+  </div>
+</section>
+
+<section class="section">
+  <div class="container">
+    <aside><div id="disqus_thread"></div></aside>
+  
+    <script type="text/javascript">
+      var disqus_shortname = 'coinen';
+      function disqus() {
+        var dsq = document.createElement('script'); dsq.type = 'text/javascript'; dsq.async = true;
+        dsq.src = '//' + disqus_shortname + '.disqus.com/embed.js';
+        (document.getElementsByTagName('head')[0] || document.getElementsByTagName('body')[0]).appendChild(dsq);
+      }
+  
+      disqus();
+  
+
+    </script>
+    <noscript>Please enable JavaScript to view the <a href="https://disqus.com/?ref_noscript" rel="nofollow">comments powered by Disqus.</a></noscript>
+  </div>
+</section>
+
+
+<section class="section">
+  <div class="container has-text-centered">
+    <p>&copy; <a href="https://github.com/OlegDokuka">Oleh Dokuka</a> 2019</p>
+    
+      <p>Powered by <a href="https://gohugo.io/">Hugo</a> &amp; <a href="https://github.com/ribice/kiss">Kiss</a>.</p>
+    
+  </div>
+</section>
+
+<script type="text/javascript">
+  var _paq = _paq || [];
+  _paq.push(['trackPageView']);
+  _paq.push(['enableLinkTracking']);
+  (function() {
+    var u="\/\/matomo.example.com\/";
+    _paq.push(['setTrackerUrl', u+'piwik.php']);
+    _paq.push(['setSiteId', '1']);
+    var d=document, g=d.createElement('script'), s=d.getElementsByTagName('script')[0];
+    g.type='text/javascript'; g.async=true; g.defer=true; g.src=u+'piwik.js'; s.parentNode.insertBefore(g,s);
+  })();
+</script>
+<noscript>
+  <img src="//matomo.example.com/piwik.php?idsite=1&amp;rec=1" style="border:0" alt="" />
+</noscript>
+
+
+</body>
+</html>
+
